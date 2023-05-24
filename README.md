@@ -1,5 +1,5 @@
 # tpac2023-breakouts
-This repo is for the W3C community to propose and organize breakout session proposals for [TPAC 2023](https://www.w3.org/2023/09/TPAC/).
+This repo is for the W3C community to propose and organize breakout sessions for [TPAC 2023](https://www.w3.org/2023/09/TPAC/).
 
 Please see:
 
