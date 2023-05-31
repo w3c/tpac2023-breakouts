@@ -1,0 +1,87 @@
+name: Session proposal
+description: Propose to chair a breakout session at TPAC
+labels: ["session"]
+body:
+
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for proposing to chair a TPAC breakout session.
+        Please review the [good practices for session chairs](https://github.com/w3c/tpac-breakouts/wiki/Good-Practices-for-Session-Chairs).
+        Use issue comments to update this information as you learn more about your session and other sessions.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Session description
+      description: |
+        A short description of topic and goals of your breakout session.
+        Note: Please ensure that the session is [in scope for a TPAC breakout](https://github.com/w3c/tpac-breakouts/wiki/Policies#session-scope).
+    validations:
+      required: true
+
+  - type: textarea
+    id: chairs
+    attributes:
+      label: Additional session chairs (Optional)
+      description: |
+        GitHub identities of additional session chairs other than you. Comma-separated list.
+    validations:
+      required: false
+
+  - type: input
+    id: shortname
+    attributes:
+      label: IRC channel (Optional)
+      description: |
+        Shortname for the IRC channel. If not provided, channel name will be generated from the session title.
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        Preferences
+
+  - type: dropdown
+    id: duration
+    attributes:
+      label: Session duration
+      options:
+        - 60 minutes
+        - 30 minutes
+    validations:
+      required: true
+
+  - type: textarea
+    id: conflicts
+    attributes:
+      label: Scheduling conflicts (Optional)
+      description: |
+        Please list any sessions for which you have a strong preference to avoid a scheduling conflict.
+        Comma-separated list of sessions identified by issue numbers in this GitHub repo (e.g., `#32, #18`).
+    validations:
+      required: false
+
+  - type: dropdown
+    id: capacity
+    attributes:
+      label: Room capacity (Optional)
+      description: |
+        Room capacity.
+      options:
+        - Don't know.
+        - Small (fewer than 20 people)
+        - Large (more than 20 people)
+        - XXL (more than 50 people)
+    validations:
+      required: false
+
+  - type: textarea
+    id: comments
+    attributes:
+      label: Comments (Optional)
+      description: |
+        Any additional input, including timing constraints, that we should be aware of.
+      validations:
+        required: false
