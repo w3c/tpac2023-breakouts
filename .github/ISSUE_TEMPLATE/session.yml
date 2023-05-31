@@ -93,9 +93,9 @@ body:
       description: |
         As the agenda and meeting materials become available, you will be able to update your session description in markdown to add links. Similarly, after the meeting, you can link to minutes.
 
-        **PLEASE ONLY EDIT BY REPLACING _@@_ with URLs!**
+        **PLEASE ONLY EDIT BY REPLACING @@ with URLs!**
       value: |
-        - Agenda: _@@_
-        - Slides: _@@_
-        - Minutes: _@@_
+        - Agenda: @@
+        - Slides: @@
+        - Minutes: @@
 
