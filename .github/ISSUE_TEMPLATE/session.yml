@@ -8,14 +8,14 @@ body:
       value: |
         Thank you for proposing to chair a TPAC breakout session.
         Please review the [good practices for session chairs](https://github.com/w3c/tpac-breakouts/wiki/Good-Practices-for-Session-Chairs).
-        Use issue comments to update this information as you learn more about your session and other sessions.
+        Use issue comments for discussion of the session. Please avoid editing the markdown directly except to add links to materials as described below.
 
   - type: textarea
     id: description
     attributes:
       label: Session description
       description: |
-        A short description of topic and goals of your breakout session.
+        A short description of topic and goals of your breakout session. Simple markdown only please (inline formatting, links, lists).
         Note: Please ensure that the session is [in scope for a TPAC breakout](https://github.com/w3c/tpac-breakouts/wiki/Policies#session-scope).
     validations:
       required: true
@@ -25,7 +25,7 @@ body:
     attributes:
       label: Additional session chairs (Optional)
       description: |
-        GitHub identities of additional session chairs other than you. Comma-separated list.
+        GitHub identities of additional session chairs other than you. Space- or comma-separated list.
     validations:
       required: false
 
@@ -85,3 +85,17 @@ body:
         Any additional input, including timing constraints, that we should be aware of.
     validations:
       required: false
+
+  - type: textarea
+    id: materials
+    attributes:
+      label: Meeting materials
+      description: |
+        As the agenda and meeting materials become available, you will be able to update your session description in markdown to add links. Similarly, after the meeting, you can link to minutes.
+
+        **PLEASE ONLY EDIT BY REPLACING _@@_ with URLs!**
+      value: |
+        - Agenda: _@@_
+        - Slides: _@@_
+        - Minutes: _@@_
+
