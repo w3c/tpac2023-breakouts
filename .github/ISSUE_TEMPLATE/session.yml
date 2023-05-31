@@ -41,14 +41,14 @@ body:
   - type: markdown
     attributes:
       value: |
-        Preferences
+        ## Preferences
 
   - type: dropdown
     id: duration
     attributes:
       label: Session duration
       options:
-        - 60 minutes
+        - 60 minutes (Default)
         - 30 minutes
     validations:
       required: true
@@ -70,7 +70,7 @@ body:
       description: |
         Room capacity.
       options:
-        - Don't know.
+        - Don't know (Default)
         - Small (fewer than 20 people)
         - Large (more than 20 people)
         - XXL (more than 50 people)
