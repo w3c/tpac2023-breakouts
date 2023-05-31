@@ -72,8 +72,8 @@ body:
       options:
         - Don't know (Default)
         - Small (fewer than 20 people)
-        - Large (more than 20 people)
-        - XXL (more than 50 people)
+        - Large (20-45 people)
+        - Really quite large (more than 45 people)
     validations:
       required: true
 
