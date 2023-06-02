@@ -15,8 +15,15 @@ body:
     attributes:
       label: Session description
       description: |
-        A short description of topic and goals of your breakout session. Simple markdown only please (inline formatting, links, lists).
+        Simple markdown only please (inline formatting, links, lists).
         Note: Please ensure that the session is [in scope for a TPAC breakout](https://github.com/w3c/tpac-breakouts/wiki/Policies#session-scope).
+    validations:
+      required: true
+
+  - type: input
+    id: goal
+    attributes:
+      label: Session goal(s)
     validations:
       required: true
 
@@ -37,6 +44,18 @@ body:
         Shortname for the IRC channel. If not provided, channel name will be generated from the session title.
     validations:
       required: false
+
+  - type: dropdown
+    id: attendance
+    attributes:
+      label: Attendance
+      description: |
+        TPAC breakouts sessions are usually open to the public (including remote attendees). Please only select “Restricted” if there is a compelling reason why the session should only be open to TPAC registrants.
+      options:
+        - Anyone may attend (Default)
+        - Restricted to TPAC registrants
+    validations:
+      required: true
 
   - type: markdown
     attributes:
@@ -59,7 +78,7 @@ body:
       label: Scheduling conflicts (Optional)
       description: |
         Please list any sessions for which you have a strong preference to avoid a scheduling conflict.
-        Comma-separated list of sessions identified by issue numbers in this GitHub repo (e.g., `#32, #18`).
+        Space- or comma-separated list of sessions identified by issue numbers in this GitHub repo (e.g., `#32 #18`).
     validations:
       required: false
 
@@ -68,7 +87,7 @@ body:
     attributes:
       label: Room capacity
       description: |
-        Room capacity.
+        Estimate of in-person attendance.
       options:
         - Don't know (Default)
         - Small (fewer than 20 people)
@@ -98,4 +117,3 @@ body:
         - Agenda: @@
         - Slides: @@
         - Minutes: @@
-
