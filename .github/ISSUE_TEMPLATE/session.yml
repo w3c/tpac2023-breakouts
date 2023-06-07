@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank you for proposing to chair a TPAC breakout session. Please ensure that the session is [in scope for a TPAC breakout](https://github.com/w3c/tpac-breakouts/wiki/Policies#session-scope) and review the [good practices for session chairs](https://github.com/w3c/tpac-breakouts/wiki/Good-Practices-for-Session-Chairs), which includes information about how you can later update your session information.
+        Thank you for proposing to chair a TPAC breakout session. Please ensure that the session is [in scope for a TPAC breakout](https://github.com/w3c/tpac-breakouts/wiki/Policies#session-scope) and review the [good practices for session chairs](https://github.com/w3c/tpac-breakouts/wiki/Good-Practices-for-Session-Chairs), which includes information about [how you can later update your session](https://github.com/w3c/tpac-breakouts/wiki/Good-Practices-for-Session-Chairs#how-to-update-a-session) information.
 
   - type: textarea
     id: description
