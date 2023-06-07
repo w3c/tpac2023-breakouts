@@ -2,6 +2,11 @@ name: Session proposal
 description: Propose to chair a breakout session at TPAC
 labels: ["session"]
 body:
+# This repo includes code that validates instances of the data below. 
+# The validation code parses this file and uses "id" for some aspects of validation. 
+# One implication is that labels below can be changed without disrupting some of the validation code.
+# However, the validation code in some cases also matches on values of "options" below, so if those change,
+# you will need to change the validation code as well.
 
   - type: markdown
     attributes:
