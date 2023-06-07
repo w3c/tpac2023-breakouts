@@ -48,7 +48,7 @@ body:
   - type: dropdown
     id: attendance
     attributes:
-      label: Attendance
+      label: Who can attend
       description: |
         TPAC breakouts sessions are usually open to the public (including remote attendees). Please only select “Restricted” if there is a compelling reason why the session should only be open to TPAC registrants.
       options:
@@ -75,24 +75,23 @@ body:
   - type: textarea
     id: conflicts
     attributes:
-      label: Scheduling conflicts (Optional)
+      label: Other sessions where we should avoid scheduling conflicts (Optional)
       description: |
-        Please list any sessions for which you have a strong preference to avoid a scheduling conflict.
-        Space- or comma-separated list of sessions identified by issue numbers in this GitHub repo (e.g., `#32 #18`).
+        Identify sessions by their issue number in this GitHub repo (e.g., `#32, #18`).
     validations:
       required: false
 
   - type: dropdown
     id: capacity
     attributes:
-      label: Room capacity
+      label: Estimated number of in-person attendees
       description: |
         Estimate of in-person attendance.
       options:
         - Don't know (Default)
-        - Small (fewer than 20 people)
-        - Large (20-45 people)
-        - Really quite large (more than 45 people)
+        - Fewer than 20 people
+        - 20-45 people
+        - More than 45 people
     validations:
       required: true
 
