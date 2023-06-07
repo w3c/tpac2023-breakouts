@@ -29,7 +29,7 @@ body:
     attributes:
       label: Additional session chairs (Optional)
       description: |
-        GitHub identities of additional session chairs other than you. Space- or comma-separated list.
+        GitHub identities of additional session chairs other than you (e.g., `@tidoust, @ianbjacobs`). Space- or comma-separated list.
     validations:
       required: false
 
@@ -38,7 +38,7 @@ body:
     attributes:
       label: IRC channel (Optional)
       description: |
-        Shortname for the IRC channel.
+        Shortname for the irc.w3.org channel (e.g., `my-fav-session`)
     validations:
       required: false
 
@@ -74,7 +74,7 @@ body:
     attributes:
       label: Other sessions where we should avoid scheduling conflicts (Optional)
       description: |
-        Identify sessions by their issue number in this GitHub repo (e.g., `#32, #18`).
+        Identify sessions by their issue number in this GitHub repo (e.g., `#32, #18`). Space- or comma-separated list.
     validations:
       required: false
 
