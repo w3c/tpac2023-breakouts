@@ -38,7 +38,7 @@ body:
     attributes:
       label: IRC channel (Optional)
       description: |
-        Shortname for the IRC channel. If not provided, channel name will be generated from the session title.
+        Shortname for the IRC channel.
     validations:
       required: false
 
