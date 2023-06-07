@@ -82,8 +82,6 @@ body:
     id: capacity
     attributes:
       label: Estimated number of in-person attendees
-      description: |
-        Estimate of in-person attendance.
       options:
         - Don't know (Default)
         - Fewer than 20 people
