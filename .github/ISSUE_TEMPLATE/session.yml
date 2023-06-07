@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank you for proposing to chair a TPAC breakout session.
+        Thank you for proposing to chair a TPAC breakout session. Note: Please ensure that the session is [in scope for a TPAC breakout](https://github.com/w3c/tpac-breakouts/wiki/Policies#session-scope).
         Please review the [good practices for session chairs](https://github.com/w3c/tpac-breakouts/wiki/Good-Practices-for-Session-Chairs).
         Use issue comments for discussion of the session. Please avoid editing the markdown directly except to add links to materials as described below.
 
@@ -16,7 +16,6 @@ body:
       label: Session description
       description: |
         Simple markdown only please (inline formatting, links, lists).
-        Note: Please ensure that the session is [in scope for a TPAC breakout](https://github.com/w3c/tpac-breakouts/wiki/Policies#session-scope).
     validations:
       required: true
 
