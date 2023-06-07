@@ -20,7 +20,7 @@ body:
   - type: input
     id: goal
     attributes:
-      label: Session goal(s)
+      label: Session goal
     validations:
       required: true
 
