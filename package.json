@@ -1,0 +1,6 @@
+{
+  "name": "tpac-breakouts",
+  "devDependencies": {
+    "yaml": "^2.3.1"
+  }
+}
