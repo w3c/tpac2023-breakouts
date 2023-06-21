@@ -29,6 +29,7 @@ async function main(sessionNumber, changesFile) {
   // First, retrieve known information about the project and the session
   const PROJECT_OWNER = await getEnvKey('PROJECT_OWNER');
   const PROJECT_NUMBER = await getEnvKey('PROJECT_NUMBER');
+  const CHAIR_W3CID = await getEnvKey('CHAIR_W3CID', {}, true);
   console.log();
   console.log(`Retrieve project ${PROJECT_OWNER}/${PROJECT_NUMBER}...`);
   const project = await fetchProject(PROJECT_OWNER, PROJECT_NUMBER);
@@ -43,6 +44,7 @@ async function main(sessionNumber, changesFile) {
   console.log(`- ${project.rooms.length} rooms`);
   console.log(`- ${project.slots.length} slots`);
   console.log(`- ${project.labels.length} labels`);
+  project.chairsToW3CID = CHAIR_W3CID;
   console.log(`Retrieve project ${PROJECT_OWNER}/${PROJECT_NUMBER}... done`);
 
   console.log();

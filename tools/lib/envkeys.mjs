@@ -7,9 +7,9 @@ let config = null;
  * Function throws if the environment key is missing, unless a default
  * value was provided
  */
-export async function getEnvKey(key, defaultValue) {
+export async function getEnvKey(key, defaultValue, json) {
   if (Object.hasOwn(process.env, key)) {
-    return process.env[key];
+    return json ? JSON.parse(process.env[key]) : process.env[key];
   }
   try {
     if (!config) {

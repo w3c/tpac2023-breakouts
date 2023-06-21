@@ -72,3 +72,7 @@ jobs:
           # project and public_repo scope.
           GRAPHQL_TOKEN: ${{ secrets.GRAPHQL_TOKEN }}
 
+          # Mapping between chair GitHub identities and W3C IDs must be stored
+          # in a variable. Structure is a JSON object with identities as keys.
+          CHAIR_W3CID: ${{ vars.CHAIR_W3CID }}
+

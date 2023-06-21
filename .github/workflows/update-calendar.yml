@@ -1,20 +1,26 @@
-name: Validate breakout session grid
+name: Update TPAC calendar based on sessions info
 
 on:
   workflow_dispatch:
     inputs:
-      validation:
-        description: 'Validate only scheduling conflicts (default) or re-validate all sessions'
+      sessionNumber:
+        description: 'Session issue number or "all" to convert all valid sessions'
         required: true
-        default: 'scheduling'
+        default: 'all'
+        type: string
+      calendarstatus:
+        description: 'Calendar entry status to use'
+        required: true
+        default: 'draft'
         type: choice
         options:
-          - scheduling
-          - everything
+          - draft
+          - tentative
+          - confirmed
 
 jobs:
-  validate-grid:
-    name: Validate breakout session grid
+  update-calendar:
+    name: Update TPAC calendar
     runs-on: ubuntu-latest
     steps:
       - name: Setup node.js
@@ -30,8 +36,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Validate grid and update issue labels accordingly
-        run: node tools/validate-grid.mjs ${{ inputs.validation }}
+      - name: Convert session issues to calendar entries.
+        run: node tools/update-calendar.mjs ${{ inputs.sessionNumber }} ${{ inputs.calendarstatus }}
         env:
           # URL of the annual TPAC XXXX breakout project.
           # The PROJECT_OWNER and PROJECT_NUMBER variables must be defined on
@@ -48,6 +54,17 @@ jobs:
           # A valid Personal Access Token (classic version) with project
           # and public_repo scope.
           GRAPHQL_TOKEN: ${{ secrets.GRAPHQL_TOKEN }}
+
+          # Information about the team user on behalf of which the updates to
+          # the calendar will be made. The password must obviously be stored
+          # as a secret!
+          W3C_LOGIN: ${{ vars.W3C_LOGIN }}
+          W3C_PASSWORD: ${{ secrets.W3C_PASSWORD }}
+
+          # Mapping between rooms and Zoom meetings must be stored in a variable
+          # (so that it does not get published). Structure is a JSON object
+          # with room names as keys.
+          ROOM_ZOOM: ${{ vars.ROOM_ZOOM }}
 
           # Mapping between chair GitHub identities and W3C IDs must be stored
           # in a variable. Structure is a JSON object with identities as keys.

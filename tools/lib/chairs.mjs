@@ -20,7 +20,7 @@ import { fetchW3CAccount } from './w3caccount.mjs';
  * account information if user did not link their GitHub account with their
  * W3C account.
  */
-export async function fetchSessionChairs(session) {
+export async function fetchSessionChairs(session, chairs2W3CID) {
   const chairs = [];
   if (session.author) {
     const w3cAccount = await fetchW3CAccount(session.author.databaseId);
@@ -33,6 +33,10 @@ export async function fetchSessionChairs(session) {
       chair.w3cId = w3cAccount.w3cId;
       chair.name = w3cAccount.name;
       chair.email = w3cAccount.email;
+    }
+    else if (chairs2W3CID?.[session.author.login]) {
+      chair.w3cId = chairs2W3CID[session.author.login];
+      chair.name = session.author.login;
     }
     chairs.push(chair);
   }
@@ -54,6 +58,10 @@ export async function fetchSessionChairs(session) {
           chair.w3cId = w3cAccount.w3cId;
           chair.name = w3cAccount.name;
           chair.email = w3cAccount.email;
+        }
+        else if (chairs2W3CID?.[session.author.login]) {
+          chair.w3cId = chairs2W3CID[session.author.login];
+          chair.name = session.author.login;
         }
       }
       chairs.push(chair);

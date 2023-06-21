@@ -23,6 +23,11 @@ const labels = [
     "color": "1D76DB"
   },
   {
+    "name": "error: chair conflict",
+    "description": "Session scheduled at the same time as another session with an overlapping chair",
+    "color": "B60205"
+  },
+  {
     "name": "error: chairs",
     "description": "Cannot retrieve the W3C account of a session chair",
     "color": "B60205"
@@ -70,6 +75,11 @@ const labels = [
   {
     "name": "warning: minutes",
     "description": "No link to the minutes whereas session is past",
+    "color": "FBCA04"
+  },
+  {
+    "name": "warning: minutes origin",
+    "description": "Minutes are not stored on www.w3.org",
     "color": "FBCA04"
   },
   {

@@ -1,6 +1,7 @@
 import { fetchProject, validateProject } from './project.mjs';
 import { initSectionHandlers, validateSessionBody, parseSessionBody } from './session.mjs';
 import { fetchSessionChairs, validateSessionChairs } from './chairs.mjs';
+import { todoStrings } from './todostrings.mjs';
 
 
 /**
@@ -66,7 +67,7 @@ ${projectErrors.map(error => '- ' + error).join('\n')}`);
 
   // Retrieve information about chairs, unless that was already done
   if (!session.chairs) {
-    session.chairs = await fetchSessionChairs(session);
+    session.chairs = await fetchSessionChairs(session, project.chairsToW3CID);
   }
   const chairsErrors = validateSessionChairs(session.chairs);
   if (chairsErrors.length > 0) {
@@ -134,6 +135,22 @@ ${projectErrors.map(error => '- ' + error).join('\n')}`);
     }
   }
 
+  // Check absence of conflict with sessions with same chair(s)
+  const chairConflictErrors = project.sessions
+    .filter(s => s !== session &&
+      s.slot === session.slot &&
+      (s.author.login === session.author.login ||
+        s.chairs.find(chair => session.chairs.find(c => c.login === chair || c.login === chair?.login))))
+    .map(s => `Same slot as session "${s.title}" (#${s.number}), which share a common chair`);
+  if (chairConflictErrors.length > 0) {
+    errors.push({
+      session: sessionNumber,
+      severity: 'error',
+      type: 'chair conflict',
+      messages: chairConflictErrors
+    });
+  }
+
   // Check assigned slot is different from conflicting sessions
   // (skipped if the list of conflicting sessions is invalid)
   if (!hasConflictErrors && session.slot && session.description.conflicts) {
@@ -194,7 +211,7 @@ ${projectErrors.map(error => '- ' + error).join('\n')}`);
 
   function isMaterialMissing(name) {
     return !session.description.materials[name] ||
-      ['@', '@@', '@@@', 'TBD', 'TODO'].includes(session.description.materials[name].toUpperCase());
+      todoStrings.includes(session.description.materials[name].toUpperCase());
   }
 
   // If breakout session takes place in less than 2 days (or past),
@@ -226,6 +243,19 @@ ${projectErrors.map(error => '- ' + error).join('\n')}`);
       type: 'minutes',
       messages: ['Session needs a link to the minutes']
     });
+  }
+
+  // Minutes should ideally be stored on www.w3.org
+  if (!isMaterialMissing('minutes')) {
+    const minutesUrl = session.description.materials.minutes;
+    if (!minutesUrl.match(/\/www\.w3\.org\//)) {
+      errors.push({
+        session: sessionNumber,
+        severity: 'warning',
+        type: 'minutes origin',
+        messages: ['Minutes not stored on www.w3.org']
+      });
+    }
   }
 
   return errors;

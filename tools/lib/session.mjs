@@ -3,6 +3,7 @@ import * as path from 'node:path';
 import * as YAML from 'yaml';
 import { fileURLToPath } from 'url';
 import { sendGraphQLRequest } from './graphql.mjs';
+import { todoStrings } from './todostrings.mjs';
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 
@@ -41,7 +42,8 @@ export async function initSectionHandlers() {
         title: section.attributes.label.replace(/ \(Optional\)$/, ''),
         required: !!section.validations?.required,
         validate: value => true,
-        parse: value => value
+        parse: value => value,
+        serialize: value => value
       };
       if (section.type === 'dropdown') {
         handler.options = section.attributes.options;
@@ -53,11 +55,9 @@ export async function initSectionHandlers() {
       return handler;
     })
     .map(handler => {
-      // Add custom validation constraints and parse logic
-      // TODO: could some of this custom logic be expressed in the YAML file
-      // directly to avoid having to look at two places when making changes?
-      // Or would GitHub reject the YAML file if it contains additional
-      // properties?
+      // Add custom validation constraints and parse/serialize logic
+      // Ideally, this logic would be encoded in session.yml but GitHub rejects
+      // additional properties in issue template files.
       switch (handler.id) {
 
       case 'description':
@@ -77,6 +77,7 @@ export async function initSectionHandlers() {
             .filter(nick => !!nick);
           return chairs.every(nick => nick.match(/^@?[A-Za-z0-9][A-Za-z0-9\-]+$/));
         }
+        handler.serialize = value => value.map(nick => `@${nick}`).join(', ');
         break;
 
       case 'shortname':
@@ -86,10 +87,13 @@ export async function initSectionHandlers() {
       case 'attendance':
         handler.parse = value => value === 'Restricted to TPAC registrants' ?
           'restricted' : 'public';
+        handler.serialize = value => value === 'restricted' ?
+          'Restricted to TPAC registrants' : 'Anyone may attend (Default)';
         break;
 
       case 'duration':
         handler.parse = value => value === '30 minutes' ? 30 : 60;
+        handler.serialize = value => value === 30 ? '30 minutes' : '60 minutes (Default)';
         break;
 
       case 'conflicts':
@@ -105,6 +109,7 @@ export async function initSectionHandlers() {
             .filter(issue => !!issue);
           return conflictingSessions.every(issue => issue.match(/^#\d+$/));
         };
+        handler.serialize = value => value.map(issue => `#${issue}`).join(', ');
         break;
 
       case 'capacity':
@@ -116,9 +121,18 @@ export async function initSectionHandlers() {
           case 'More than 45 people': return 50;
           };
         };
+        handler.serialize = value => {
+          switch (value) {
+          case 0: return 'Don\'t know (Default)';
+          case 15: return 'Fewer than 20 people';
+          case 30: return '20-45 people';
+          case 50: return 'More than 45 people';
+          }
+        }
         break;
 
       case 'materials':
+        const capitalize = str => str.slice(0, 1).toUpperCase() + str.slice(1);
         handler.parse = value => {
           const materials = {};
           value.split('\n')
@@ -141,7 +155,7 @@ export async function initSectionHandlers() {
             if (!match) {
               return false;
             }
-            if (!['@', '@@', '@@@', 'TBD', 'TODO'].includes(match[2].toUpperCase())) {
+            if (!todoStrings.includes(match[2].toUpperCase())) {
               try {
                 new URL(match[2]);
                 return true;
@@ -153,6 +167,11 @@ export async function initSectionHandlers() {
             return true;
           });
         }
+        handler.serialize = value => Object.entries(value)
+          .map(([key, url]) => todoStrings.includes(url) ?
+            `- ${capitalize(key)}: ${url}` :
+            `- [${capitalize(key)}](${url})`)
+          .join('\n');
         break;
       }
 
@@ -233,11 +252,29 @@ export function parseSessionBody(body) {
         handler.title === section.title);
       return {
         id: sectionHandler.id,
-        value: section.value ? sectionHandler.parse(section.value) : null
+        value: section.value && section.value !== 0 ?
+          sectionHandler.parse(section.value) :
+          null
       };
     })
     .forEach(input => session[input.id] = input.value);
   return session;
+}
+
+
+/**
+ * Serialize a session description into an issue body
+ */
+export function serializeSessionDescription(description) {
+  if (!sectionHandlers) {
+    throw new Error('Need to call `initSectionHandlers` first!');
+  }
+  return sectionHandlers
+    .map(handler => `### ${handler.title}${handler.required ? '' : ' (Optional)'}
+
+${(description[handler.id] && description[handler.id] !== 0) ?
+    handler.serialize(description[handler.id]) : '_No response_' }`)
+    .join('\n\n');
 }
 
 
@@ -304,5 +341,27 @@ export async function updateSessionLabels(session, project, newLabels) {
   }
   else {
     console.log(`- no label to remove`);
+  }
+}
+
+
+/**
+ * Update session labels
+ */
+export async function updateSessionDescription(session) {
+  const body = serializeSessionDescription(session.description);
+  const res = await sendGraphQLRequest(`mutation {
+    updateIssue(input: {
+      id: "${session.id}",
+      body: "${body.replace('"', '\\"').replace('\\', '\\\\')}"
+    }) {
+      issue {
+        id
+      }
+    }
+  }`);
+  if (!res?.data?.updateIssue?.issue?.id) {
+    console.log(JSON.stringify(res, null, 2));
+    throw new Error(`GraphQL error, could not update issue body`);
   }
 }
