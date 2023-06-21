@@ -104,10 +104,15 @@ body:
     validations:
       required: false
 
+  - type: markdown
+    attributes:
+      value: |
+        ## Materials
+
   - type: textarea
     id: materials
     attributes:
-      label: Meeting materials
+      label: Agenda, minutes, slides, etc.
       description: |
         As the agenda and meeting materials become available, you will be able to update your session description in markdown to add links. Similarly, after the meeting, you can link to minutes.
 
