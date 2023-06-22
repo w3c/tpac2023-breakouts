@@ -124,7 +124,7 @@ ${projectErrors.map(error => '- ' + error).join('\n')}`);
 
   // Check assigned room matches requested capacity
   if (session.room && session.description.capacity) {
-    const room = project.rooms[session.room];
+    const room = project.rooms.find(s => s.name === session.room);
     if (room.capacity < session.description.capacity) {
       errors.push({
         session: sessionNumber,

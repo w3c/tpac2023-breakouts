@@ -53,7 +53,7 @@ async function main(sessionNumber, status) {
   sessions = sessions.filter(s => !!s);
   if (sessionNumber) {
     if (sessions.length === 0) {
-      throw new Error(`Session ${session.number} contains errors that need fixing`);
+      throw new Error(`Session ${sessionNumber} contains errors that need fixing`);
     }
   }
   else {
@@ -70,9 +70,10 @@ async function main(sessionNumber, status) {
     for (const session of sessions) {
       console.log();
       console.log(`Convert session ${session.number} to calendar entry...`);
+      const room = project.rooms.find(r => r.name === session.room);
+      const zoom = ROOM_ZOOM[room?.label] ? ROOM_ZOOM[room.label] : undefined;
       await convertSessionToCalendarEntry({
-        browser, session, project, status,
-        zoom: session.room && ROOM_ZOOM[session.room] ? ROOM_ZOOM[session.room] : undefined,
+        browser, session, project, status, zoom,
         calendarServer: CALENDAR_SERVER,
         login: W3C_LOGIN,
         password: W3C_PASSWORD

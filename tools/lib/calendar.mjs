@@ -40,6 +40,53 @@ function generateShortname(session) {
 
 
 /**
+ * Retrieve the Zoom meeting link. Zoom info may be a string or an object
+ * with a `link` property.
+ */
+function getZoomLink(zoomInfo) {
+  if (!zoomInfo) {
+    return '';
+  }
+  const link = typeof zoomInfo === 'string' ? zoomInfo : zoomInfo.link;
+  if (!link || todoStrings.includes(link)) {
+    return '';
+  }
+  else {
+    return link;
+  }
+}
+
+
+/**
+ * Retrieve instructions to join the meeting through Zoom, if possible.
+ */
+function getZoomInstructions(zoomInfo) {
+  if (!zoomInfo || typeof zoomInfo === 'string') {
+    return '';
+  }
+  const link = getZoomLink(zoomInfo);
+  const id = zoomInfo.id;
+  const passcode = zoomInfo.passcode;
+  if (!id) {
+    return '';
+  }
+  if (!link.includes('/' + id.replace(/\s/g, ''))) {
+    throw new Error(`Inconsistent info in ROOM_ZOOM: meeting ID "${id}" could not be found in meeting link "${link}"`);
+  }
+
+  return `Join the Zoom meeting through:
+${link}
+
+Or join from your phone using one of the local phone numbers at:
+https://w3c.zoom.us/u/kb8tBvhWMN
+
+Meeting ID: ${id}
+${passcode ? 'Passcode: ' + passcode : ''}
+`;
+}
+
+
+/**
  * Login to W3C server.
  *
  * The function throws if login fails.
@@ -166,9 +213,9 @@ async function fillCalendarEntry({ page, session, project, status, zoom }) {
 
   await clickOnElement('input#event_joinVisibility_' + (session.description.attendance === 'restricted' ? '1' : '0'));
 
-  if (zoom) {
-    await fillTextInput('input#event_joinLink', zoom);
-    await fillTextInput('textarea#event_joiningInstructions', '');
+  if (getZoomLink(zoom)) {
+    await fillTextInput('input#event_joinLink', getZoomLink(zoom));
+    await fillTextInput('textarea#event_joiningInstructions', getZoomInstructions(zoom));
   }
   else {
     // No Zoom info? Let's preserve what the calendar entry may already contain.
