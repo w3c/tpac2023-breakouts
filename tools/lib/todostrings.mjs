@@ -1,1 +1,1 @@
-export const todoStrings = ['@', '@@', '@@@', 'TBD', 'TODO'];
+export const todoStrings = ['', '@', '@@', '@@@', 'TBD', 'TODO'];

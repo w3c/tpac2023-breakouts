@@ -1,6 +1,7 @@
 {
   "name": "tpac-breakouts",
   "devDependencies": {
+    "irc": "^0.5.2",
     "puppeteer": "^20.5.0",
     "yaml": "^2.3.1"
   }
