@@ -13,12 +13,15 @@ import { sendGraphQLRequest } from './graphql.mjs';
  * {
  *   "title": "TPAC xxxx breakout sessions",
  *   "url": "https://github.com/organization/w3c/projects/xx",
+ *   "id": "xxxxxxx",
+ *   "roomsFieldId": "xxxxxxx",
  *   "rooms": [
- *     { "name": "Salon Ecija (30)", "label": "Salon Ecija", "capacity": 30 },
+ *     { "id": "xxxxxxx", "name": "Salon Ecija (30)", "label": "Salon Ecija", "capacity": 30 },
  *     ...
  *   ],
+ *   "slotsFieldId": "xxxxxxx",
  *   "slots": [
- *     { "name": "9:30 - 10:30", "start": "9:30", "end": "10:30", "duration": 60 },
+ *     { "id": "xxxxxxx", "name": "9:30 - 10:30", "start": "9:30", "end": "10:30", "duration": 60 },
  *     ...
  *   ],
  *   "sessions": [
@@ -63,14 +66,17 @@ export async function fetchProject(login, id) {
   const rooms = await sendGraphQLRequest(`query {
     ${type}(login: "${login}"){
       projectV2(number: ${id}) {
+        id
         url
         title
         shortDescription
         field(name: "Room") {
           ... on ProjectV2SingleSelectField {
+            id
             name
             options {
               ... on ProjectV2SingleSelectFieldOption {
+                id
                 name
               }
             }
@@ -86,9 +92,11 @@ export async function fetchProject(login, id) {
       projectV2(number: ${id}) {
         field(name: "Slot") {
           ... on ProjectV2SingleSelectField {
+            id
             name
             options {
               ... on ProjectV2SingleSelectFieldOption {
+                id
                 name
               }
             }
@@ -104,6 +112,7 @@ export async function fetchProject(login, id) {
       projectV2(number: ${id}) {
         items(first: 100) {
           nodes {
+            id
             content {
               ... on Issue {
                 id
@@ -170,6 +179,7 @@ export async function fetchProject(login, id) {
     // Project's title and URL are more for internal reporting purpose.
     title: rooms.data[type].projectV2.title,
     url: rooms.data[type].projectV2.url,
+    id: rooms.data[type].projectV2.id,
 
     // Project's description should help us extract additional metadata:
     // - the date of the breakout sessions
@@ -181,11 +191,13 @@ export async function fetchProject(login, id) {
     // for the "Room" custom field in the project (which should include the
     // room's capacity), the actual name of the room without the capacity, and
     // the room's capacity in number of seats.
+    roomsFieldId: rooms.data[type].projectV2.field.id,
     rooms: rooms.data[type].projectV2.field.options.map(room => {
       const match =
         room.name.match(/(.*) \((\d+)\)$/) ??
         [room.name, room.name, '30'];
       return {
+        id: room.id,
         name: match[0],
         label: match[1],
         capacity: parseInt(match[2], 10)
@@ -195,10 +207,12 @@ export async function fetchProject(login, id) {
     // List of slots. For each of them, we return the exact name of the option
     // for the "Slot" custom field in the project, the start and end times and
     // the duration in minutes.
+    slotsFieldId: slots.data[type].projectV2.field.id,
     slots: slots.data[type].projectV2.field.options.map(slot => {
       const times = slot.name.match(/^(\d+):(\d+)\s*-\s*(\d+):(\d+)$/) ??
         [null, '00', '00', '01', '00'];
       return {
+        id: slot.id,
         name: slot.name,
         start: `${times[1]}:${times[2]}`,
         end: `${times[3]}:${times[4]}`,
@@ -216,6 +230,7 @@ export async function fetchProject(login, id) {
       .filter(session => session.content.state === 'OPEN')
       .map(session => {
         return {
+          projectItemId: session.id,
           id: session.content.id,
           repository: session.content.repository.nameWithOwner,
           number: session.content.number,
@@ -260,6 +275,49 @@ function parseProjectDescription(desc) {
       .map(param => metadata[param[0]] = param[1]);
   }
   return metadata;
+}
+
+/**
+ * Record the slot and room assignment for the provided session
+ */
+export async function assignSessionsToSlotAndRoom(session, project) {
+  const slot = project.slots.find(slot => session.slot === slot.name);
+  const resSlot = await sendGraphQLRequest(`mutation {
+    updateProjectV2ItemFieldValue(input: {
+      clientMutationId: "mutatis mutandis",
+      fieldId: "${project.slotsFieldId}",
+      itemId: "${session.projectItemId}",
+      projectId: "${project.id}",
+      value: {
+        singleSelectOptionId: "${slot.id}"
+      }
+    }) {
+      clientMutationId
+    }
+  }`);
+  if (!resSlot?.data?.updateProjectV2ItemFieldValue?.clientMutationId) {
+    console.log(JSON.stringify(resSlot, null, 2));
+    throw new Error(`GraphQL error, could not assign session #${session.number} to slot ${session.slot}`);
+  }
+
+  const room = project.rooms.find(room => session.room === room.name);
+  const resRoom = await sendGraphQLRequest(`mutation {
+    updateProjectV2ItemFieldValue(input: {
+      clientMutationId: "mutatis mutandis",
+      fieldId: "${project.roomsFieldId}",
+      itemId: "${session.projectItemId}",
+      projectId: "${project.id}",
+      value: {
+        singleSelectOptionId: "${room.id}"
+      }
+    }) {
+      clientMutationId
+    }
+  }`);
+  if (!resRoom?.data?.updateProjectV2ItemFieldValue?.clientMutationId) {
+    console.log(JSON.stringify(resRoom, null, 2));
+    throw new Error(`GraphQL error, could not assign session #${session.number} to room ${session.room}`);
+  }
 }
 
 

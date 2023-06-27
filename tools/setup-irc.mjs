@@ -43,10 +43,14 @@ function getChannel(session) {
 async function main({ number, slot, onlyCommands } = {}) {
   const PROJECT_OWNER = await getEnvKey('PROJECT_OWNER');
   const PROJECT_NUMBER = await getEnvKey('PROJECT_NUMBER');
+  const CHAIR_W3CID = await getEnvKey('CHAIR_W3CID', {}, true);
   console.log();
   console.log(`Retrieve project ${PROJECT_OWNER}/${PROJECT_NUMBER}...`);
   const project = await fetchProject(PROJECT_OWNER, PROJECT_NUMBER);
-
+  if (!project) {
+    throw new Error(`Project ${PROJECT_OWNER}/${PROJECT_NUMBER} could not be retrieved`);
+  }
+  project.chairsToW3CID = CHAIR_W3CID;
   let sessions = project.sessions.filter(s => s.slot &&
     ((!number && !slot) || s.number === number || s.slot.startsWith(slot)));
   sessions.sort((s1, s2) => s1.number - s2.number);
