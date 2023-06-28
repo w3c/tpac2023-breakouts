@@ -81,7 +81,7 @@ export async function initSectionHandlers() {
         break;
 
       case 'shortname':
-        handler.validate = value => value.match(/[A-Za-z0-9\-_]/);
+        handler.validate = value => value.match(/^#?[A-Za-z0-9\-_]+$/);
         break;
 
       case 'attendance':
@@ -252,7 +252,7 @@ export function parseSessionBody(body) {
         handler.title === section.title);
       return {
         id: sectionHandler.id,
-        value: section.value && section.value !== 0 ?
+        value: section.value || section.value === 0 ?
           sectionHandler.parse(section.value) :
           null
       };
@@ -272,7 +272,7 @@ export function serializeSessionDescription(description) {
   return sectionHandlers
     .map(handler => `### ${handler.title}${handler.required ? '' : ' (Optional)'}
 
-${(description[handler.id] && description[handler.id] !== 0) ?
+${(description[handler.id] || description[handler.id] === 0) ?
     handler.serialize(description[handler.id]) : '_No response_' }`)
     .join('\n\n');
 }

@@ -32,12 +32,7 @@ const botName = 'tpac-breakout-bot';
  * Helper function to generate a shortname from the session's title
  */
 function getChannel(session) {
-  return ('#' + session?.description?.shortname) ??
-    ('#' + session.title
-      .toLowerCase()
-      .replace(/\([^\)]\)/g, '')
-      .replace(/[^a-z0-0\-\s]/g, '')
-      .replace(/\s+/g, '-'));
+  return session.description.shortname;
 }
 
 async function main({ number, slot, onlyCommands } = {}) {

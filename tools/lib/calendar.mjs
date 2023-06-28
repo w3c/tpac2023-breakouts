@@ -13,6 +13,15 @@ function formatAgenda(session) {
     .map(([key, value]) => `- [${key}](${value})`);
   materials.push(`- [Session proposal on GitHub](${issueUrl})`);
 
+  const tracks = session.labels
+    .filter(label => label.startsWith('track: '))
+    .map(label => '- ' + label.substring('track: '.length));
+  tracks.sort();
+  const tracksStr = tracks.length > 0 ? `
+**Track(s):**
+${tracks.join('\n')}` :
+    '';
+
   return `**Chairs:**
 ${session.chairs.map(chair => chair.name ?? '@' + chair.login).join(', ')}
 
@@ -23,19 +32,8 @@ ${session.description.description}
 ${session.description.goal}
 
 **Materials:**
-${materials.join('\n')}`;
-}
-
-
-/**
- * Helper function to generate a shortname from the session's title
- */
-function generateShortname(session) {
-  return session.title
-    .toLowerCase()
-    .replace(/\([^\)]\)/g, '')
-    .replace(/[^a-z0-0\-\s]/g, '')
-    .replace(/\s+/g, '-');
+${materials.join('\n')}
+${tracksStr}`;
 }
 
 
@@ -222,7 +220,7 @@ async function fillCalendarEntry({ page, session, project, status, zoom }) {
   }
 
   await fillTextInput('input#event_chat',
-    `https://irc.w3.org/?channels=#${session.description.shortname ?? generateShortname(session)}`);
+    `https://irc.w3.org/?channels=${session.description.shortname}`);
   const agendaUrl = todoStrings.includes(session.description.materials.agenda) ?
     undefined : session.description.materials.agenda;
   await fillTextInput('input#event_agendaUrl', agendaUrl);
