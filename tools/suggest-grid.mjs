@@ -3,7 +3,7 @@
  *
  * To run the tool:
  *
- *  node tools/suggest-grid.mjs [preservelist or all or none] [exceptlist or none] [apply]
+ *  node tools/suggest-grid.mjs [preservelist or all or none] [exceptlist or none] [apply] [seed]
  *
  * where [preservelist or all] is a comma-separated (no spaces) list of session
  * numbers whose assigned slots and rooms must be preserved. Or "all" to
@@ -17,22 +17,58 @@
  * 
  * [apply] is "apply" if you want to apply the suggested grid on GitHub.
  * 
- * Overall rules:
- * 1. Minimize the number of rooms used in parallel.
- * 2. Only one session labeled for a given track at the same time.
- * 3. Only one session with a given chair at the same time.
- * 4. No conflicting sessions at the same time.
- * 5. Meet duration preference.
- * 6. Meet capacity preference.
- * 7. Spread sessions across rooms (i.e., use any given room minimally)
- * 8. Schedule as many sessions as possible.
+ * [seed] is the seed string to shuffle the array of sessions.
+ *
+ * Assumptions:
+ * - All rooms are of equal quality
+ * - Some slots may be seen as preferable
+ *
+ * Goals:
+ * - Where possible, sessions that belong to the same track should take place
+ * in the same room. Because a session may belong to two tracks, this is not
+ * an absolute goal.
+ * - Schedule sessions back-to-back to avoid gaps.
+ * - Favor minimizing travels over using different rooms.
+ * - Session issue number should not influence slot and room (early proponents
+ * should not be favored or disfavored).
+ * - Minimize the number of rooms used in parallel.
+ * - Only one session labeled for a given track at the same time.
+ * - Only one session with a given chair at the same time.
+ * - No identified conflicting sessions at the same time.
+ * - Meet duration preference.
+ * - Meet capacity preference.
+ *
+ * The tool schedules as many sessions as possible, skipping over sessions that
+ * it cannot schedule due to a confict that it cannot resolve.
  */
 
 import { getEnvKey } from './lib/envkeys.mjs';
 import { fetchProject, assignSessionsToSlotAndRoom } from './lib/project.mjs'
 import { validateSession } from './lib/validate.mjs';
+import seedrandom from 'seedrandom';
 
-async function main({ preserve, except, apply }) {
+/**
+ * Helper function to shuffle an array
+ */
+function shuffle(array, seed) {
+  const randomGenerator = seedrandom(seed);
+  for (let i = array.length - 1; i > 0; i--) {
+    let j = Math.floor(randomGenerator.quick() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
+/**
+ * Helper function to generate a random seed
+ */
+function makeseed() {
+  const chars = 'abcdefghijklmnopqrstuvwxyz';
+  return [1, 2, 3, 4, 5]
+    .map(_ => chars.charAt(Math.floor(Math.random() * chars.length)))
+    .join('');
+}
+
+async function main({ preserve, except, apply, seed }) {
   const PROJECT_OWNER = await getEnvKey('PROJECT_OWNER');
   const PROJECT_NUMBER = await getEnvKey('PROJECT_NUMBER');
   const CHAIR_W3CID = await getEnvKey('CHAIR_W3CID', {}, true);
@@ -58,6 +94,9 @@ async function main({ preserve, except, apply }) {
   sessions = sessions.filter(s => !!s);
   sessions.sort((s1, s2) => s1.number - s2.number);
   console.log(`- found ${sessions.length} valid sessions among them: ${sessions.map(s => s.number).join(', ')}`);
+  seed = seed ?? makeseed();
+  shuffle(sessions, seed);
+  console.log(`- shuffled sessions with seed "${seed}" to: ${sessions.map(s => s.number).join(', ')}`);
   console.log(`Retrieve project ${PROJECT_OWNER}/${PROJECT_NUMBER} and session(s)... done`);
 
   const rooms = project.rooms;
@@ -180,7 +219,7 @@ async function main({ preserve, except, apply }) {
     return slot;
   }
 
-  function chooseRoom(session) {
+  function chooseRoom(session, track) {
     // Keep assigned room if so requested
     // and no way to choose a room if slot has not been set yet!
     if (session.room && preserve.includes(session.number)) {
@@ -190,24 +229,21 @@ async function main({ preserve, except, apply }) {
       return;
     }
 
-    // Prefer rooms that have fewer sessions assigned to them
-    const possibleRooms = rooms.slice();
-    possibleRooms.sort((s1, s2) => {
-      const s1len = s1.sessions.length;
-      const s2len = s2.sessions.length;
-      if (s1len === s2len) {
-        return s1.pos - s2.pos;
-      }
-      else {
-        return s1len - s2len;
-      }
-    });
+    // Find the session in the same that has the largest
+    // room capacity needs
+    const largestSession = track ?
+      sessions
+        .filter(s => s.tracks.includes(track))
+        .reduce((s1, s2) => Math.max(
+          s1.description.capacity ?? 0,
+          s2.description.capacity ?? 0)) :
+      session;
 
     // Find first suitable room
-    const room = possibleRooms.find(room => {
+    const room = rooms.find(room => {
       // Meet capacity preference
-      if (session.description.capacity) {
-        if (room.capacity < session.description.capacity) {
+      if (largestSession.description.capacity) {
+        if (room.capacity < largestSession.description.capacity) {
           return false;
         }
       }
@@ -235,12 +271,14 @@ async function main({ preserve, except, apply }) {
     while (session) {
       let slot = chooseSlot(session);
       while (slot) {
-        const room = chooseRoom(session);
+        const room = chooseRoom(session, track);
         slot = room ? undefined : chooseSlot(session, slot);
       }
       session = selectNextSession(track);
     }
   }
+
+  sessions.sort((s1, s2) => s1.number - s2.number);
 
   console.log();
   console.log('Grid - by slot');
@@ -316,9 +354,10 @@ if (process.argv[3]) {
     process.argv[3].map(n => parseInt(n, 10));
 }
 
-let apply = process.argv[4] === 'apply';
+const apply = process.argv[4] === 'apply';
+const seed = process.argv[5] ?? undefined;
 
-main({ preserve, except, apply })
+main({ preserve, except, apply, seed })
   .catch(err => {
     console.log(`Something went wrong: ${err.message}`);
     throw err;

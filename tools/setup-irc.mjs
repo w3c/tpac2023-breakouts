@@ -217,7 +217,7 @@ async function main({ number, slot, onlyCommands } = {}) {
 
 
 // Read slot from command-line
-if (!process.argv[2] || !process.argv[2].match(/^(\d{1:2}:\d{2}|all)$/)) {
+if (!process.argv[2] || !process.argv[2].match(/^(\d{1,2}:\d{2}|all)$/)) {
   console.log('Command needs to receive a valid slot start time (e.g., 9:30) or "all" as first parameter');
   process.exit(1);
 }
