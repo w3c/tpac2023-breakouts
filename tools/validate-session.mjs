@@ -95,7 +95,7 @@ async function main(sessionNumber, changesFile) {
         if (newDescription.comments === previousDescription.comments) {
           console.log(`- no change in comments section, no need to add label`);
           report = report.filter(error =>
-            !(error.severity === 'check' && error.type === 'comments'));
+            !(error.severity === 'check' && error.type === 'instructions'));
         }
         else {
           console.log(`- comments section changed, add label`);
@@ -109,7 +109,7 @@ async function main(sessionNumber, changesFile) {
         console.log(`- previous version of session body could not be parsed, add label`);
       }
     }
-    console.log(`Assess need to add "check: comments" label... done`);
+    console.log(`Assess need to add "check: instructions" label... done`);
   }
 
   // Time to compute label changes.
