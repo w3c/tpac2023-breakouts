@@ -18,8 +18,8 @@ import { sendGraphQLRequest } from './lib/graphql.mjs';
 
 const labels = [
   {
-    "name": "check: comments",
-    "description": "Proposal has comments. Remove label once they have been checked.",
+    "name": "check: instructions",
+    "description": "Proposal has instructions for meeting planners. Remove label once they have been checked.",
     "color": "1D76DB"
   },
   {

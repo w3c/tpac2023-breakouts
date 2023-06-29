@@ -204,8 +204,8 @@ ${projectErrors.map(error => '- ' + error).join('\n')}`);
     errors.push({
       session: sessionNumber,
       severity: 'check',
-      type: 'comments',
-      messages: ['Session contains comments']
+      type: 'instructions',
+      messages: ['Session contains instructions for meeting planners']
     });
   }
 

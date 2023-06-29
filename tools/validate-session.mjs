@@ -67,16 +67,16 @@ async function main(sessionNumber, changesFile) {
   console.log(`Validate session... done`);
 
   const checkComments = report.find(error =>
-    error.severity === 'check' && error.type === 'comments');
+    error.severity === 'check' && error.type === 'instructions');
   if (checkComments &&
-      !session.labels.includes('check: comments') &&
+      !session.labels.includes('check: instructions') &&
       changesFile) {
-    // The session contains comments and does not have a "check: comments"
+    // The session contains comments and does not have a "check: instructions"
     // label. That said, an admin may already have validated these comments
     // (and removed the label). We should only add it back if the comments
     // section changed.
     console.log();
-    console.log(`Assess need to add "check: comments" label...`);
+    console.log(`Assess need to add "check: instructions" label...`);
 
     // Read JSON file that describes changes if one was given
     // (needs to contain a dump of `github.event.changes` when run in a job)
