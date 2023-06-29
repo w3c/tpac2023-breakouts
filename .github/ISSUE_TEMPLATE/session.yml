@@ -98,9 +98,9 @@ body:
   - type: textarea
     id: comments
     attributes:
-      label: Comments (Optional)
+      label: Instructions for meeting planners (Optional)
       description: |
-        Any additional input, including timing constraints, that we should be aware of.
+        Any information for the meeting planners, including timing constraints. This information will not be exported to the TPAC site or calendar.
     validations:
       required: false
 
