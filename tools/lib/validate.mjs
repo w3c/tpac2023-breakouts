@@ -140,7 +140,7 @@ ${projectErrors.map(error => '- ' + error).join('\n')}`);
     .filter(s => s !== session &&
       s.slot === session.slot &&
       (s.author.login === session.author.login ||
-        s.chairs.find(chair => session.chairs.find(c => c.login === chair || c.login === chair?.login))))
+        s.chairs?.find(chair => session.chairs.find(c => c.login === chair || c.login === chair?.login))))
     .map(s => `Same slot as session "${s.title}" (#${s.number}), which share a common chair`);
   if (chairConflictErrors.length > 0) {
     errors.push({
