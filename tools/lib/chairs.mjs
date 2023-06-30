@@ -40,7 +40,7 @@ export async function fetchSessionChairs(session, chairs2W3CID) {
     }
     chairs.push(chair);
   }
-  if (session.chairs) {
+  if (session.description.chairs) {
     for (const login of session.description.chairs) {
       const githubAccount = await sendGraphQLRequest(`query {
         user(login: "${login}") {
