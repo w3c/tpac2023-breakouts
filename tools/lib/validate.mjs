@@ -138,10 +138,25 @@ ${projectErrors.map(error => '- ' + error).join('\n')}`);
   // Check absence of conflict with sessions with same chair(s)
   if (session.slot) {
     const chairConflictErrors = project.sessions
-      .filter(s => s !== session &&
-        s.slot === session.slot &&
-        (s.author.login === session.author.login ||
-          s.chairs?.find(chair => session.chairs.find(c => c.login === chair || c.login === chair?.login))))
+      .filter(s => s !== session && s.slot === session.slot)
+      .filter(s => {
+        if (s.author.login === session.author.login) {
+          return true;
+        }
+        if (session.chairs.find(c => c.login === s.author.login)) {
+          return true;
+        }
+        try {
+          const sdesc = parseSessionBody(s.body);
+          const inboth = sdesc.chairs.find(chair => session.chairs.find(c =>
+            (c.login && c.login === chair.login) ||
+            (c.name && c.name === chair.name)));
+          return !!inboth;
+        }
+        catch {
+          return false;
+        }
+      })
       .map(s => `Same slot as session "${s.title}" (#${s.number}), which share a common chair`);
     if (chairConflictErrors.length > 0) {
       errors.push({

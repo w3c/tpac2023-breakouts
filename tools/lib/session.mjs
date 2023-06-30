@@ -65,19 +65,40 @@ export async function initSectionHandlers() {
         break;
 
       case 'chairs':
-        // List of GitHub identities
-        handler.parse = value => value.split(/[\s,]/)
+        // List of GitHub identities... or of actual names
+        // Space-separated values are possible when there are only GitHub
+        // identities. Otherwise, CSV, line-separated or markdown lists.
+        handler.parse = value => value
+          .split(/[\n,]/)
           .map(nick => nick.trim())
+          .map(nick => nick.replace(/^-\s*(.*)$/, '$1'))
           .filter(nick => !!nick)
-          .map(nick => nick.startsWith('@') ? nick.substring(1) : nick);
+          .map(nick => {
+            if (nick.startsWith('@')) {
+              return nick
+                .split(/\s/)
+                .map(n => n.trim())
+                .map(n => { return { login: n.substring(1) }; });
+            }
+            else {
+              return { name: nick };
+            }
+          })
+          .flat();
         handler.validate = value => {
           const chairs = value
-            .split(/[\s,]/)
+            .split(/[\n,]/)
             .map(nick => nick.trim())
-            .filter(nick => !!nick);
-          return chairs.every(nick => nick.match(/^@?[A-Za-z0-9][A-Za-z0-9\-]+$/));
+            .map(nick => nick.replace(/^-\s*(.*)$/, '$1'))
+            .filter(nick => !!nick)
+            // TODO: If space-separated list, all nicks must start with "@"
+            .map(nick => nick.startsWith('@') ? nick.split(/\s/) : nick)
+            .flat();
+          return chairs.every(nick => nick.match(/^(@[A-Za-z0-9][A-Za-z0-9\-]+|[^@]+)$/));
         }
-        handler.serialize = value => value.map(nick => `@${nick}`).join(', ');
+        handler.serialize = value => value
+          .map(nick => nick.login ? `@${nick.login}` : nick.name)
+          .join(', ');
         break;
 
       case 'shortname':

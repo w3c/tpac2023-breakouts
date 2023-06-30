@@ -183,8 +183,10 @@ async function main({ preserve, except, apply, seed }) {
 
       // There must be no session chaired by the same chair at that time
       const chairConflict = potentialConflicts.find(s =>
-        s.description.chairs.find(c1 =>
-          session.description.chairs.find(c1 => c1.login === c2.login)));
+        s.chairs.find(c1 => session.chairs.find(c2 =>
+          (c1.login && c1.login === c2.login) ||
+          (c1.name && c1.name === c2.name)))
+      );
       if (chairConflict) {
         return false;
       }
