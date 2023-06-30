@@ -59,9 +59,9 @@ export async function fetchSessionChairs(session, chairs2W3CID) {
           chair.name = w3cAccount.name;
           chair.email = w3cAccount.email;
         }
-        else if (chairs2W3CID?.[session.author.login]) {
-          chair.w3cId = chairs2W3CID[session.author.login];
-          chair.name = session.author.login;
+        else if (chairs2W3CID?.[login]) {
+          chair.w3cId = chairs2W3CID[login];
+          chair.name = login;
         }
       }
       chairs.push(chair);
