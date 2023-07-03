@@ -220,7 +220,7 @@ async function fillCalendarEntry({ page, session, project, status, zoom }) {
   }
 
   await fillTextInput('input#event_chat',
-    `https://irc.w3.org/?channels=${session.description.shortname}`);
+    `https://irc.w3.org/?channels=${encodeURIComponent(session.description.shortname)}`);
   const agendaUrl = todoStrings.includes(session.description.materials.agenda) ?
     undefined : session.description.materials.agenda;
   await fillTextInput('input#event_agendaUrl', agendaUrl);
