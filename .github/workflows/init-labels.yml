@@ -1,0 +1,29 @@
+name: Initialize labels
+
+on:
+  workflow_dispatch:
+
+jobs:
+  init-labels:
+    name: Initialize repository labels
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Checkout latest version of release script
+        uses: actions/checkout@v3
+        with:
+          ref: main
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run the init labels script
+        run: node tools/manage-repo-labels.mjs ${{ github.repository }}
+        env:
+          # A valid Personal Access Token (classic version) with project
+          # and public_repo scope.
+          GRAPHQL_TOKEN: ${{ secrets.GRAPHQL_TOKEN }}

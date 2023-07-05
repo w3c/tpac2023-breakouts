@@ -201,13 +201,17 @@ if (!process.argv[2]) {
   console.log('Command needs to receive a repo owner as first parameter');
   process.exit(1);
 }
-if (!process.argv[3]) {
+if (!process.argv[3] && !process.argv[2].includes('/')) {
   console.log('Command needs to receive a repo name as second parameter');
   process.exit(1);
 }
 
-const owner = process.argv[2];
-const repo = process.argv[3];
+const owner = process.argv[2].includes('/') ?
+  process.argv[2].split('/')[0] :
+  process.argv[2];
+const repo =
+  process.argv[3] ??
+  process.argv[2].split('/')[1];
 
 createRepoLabels(owner, repo)
   .catch(err => {

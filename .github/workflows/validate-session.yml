@@ -45,7 +45,7 @@ jobs:
           # the repository. PROJECT_OWNER_TYPE needs to be set to "user" if
           # project belongs to a user. It may be omitted otherwise (or set to
           # 'org"').
-          project-url: https://github.com/${{vars.PROJECT_OWNER_TYPE || 'org'}}s/${{vars.PROJECT_OWNER}}/projects/${{vars.PROJECT_NUMBER}}
+          project-url: https://github.com/${{vars.PROJECT_OWNER_TYPE || 'org'}}s/${{vars.PROJECT_OWNER || 'w3c'}}/projects/${{vars.PROJECT_NUMBER}}
 
           # A valid Personal Access Token (classic version) with project scope
           # (and public_repo scope so that labels may be updated) needs to be
@@ -61,7 +61,7 @@ jobs:
         run: node tools/validate-session.mjs ${{ github.event.issue.number }} changes.json
         env:
           # See above for PROJECT_XX variables
-          PROJECT_OWNER: ${{ vars.PROJECT_OWNER_TYPE || 'organization' }}/${{ vars.PROJECT_OWNER }}
+          PROJECT_OWNER: ${{ vars.PROJECT_OWNER_TYPE || 'organization' }}/${{ vars.PROJECT_OWNER || 'w3c' }}
           PROJECT_NUMBER: ${{ vars.PROJECT_NUMBER }}
 
           # W3C_API_KEY needs to be set to a valid W3C API token

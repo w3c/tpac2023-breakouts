@@ -44,7 +44,7 @@ jobs:
           # the repository. PROJECT_OWNER_TYPE needs to be set to "user" if
           # project belongs to a user. It may be omitted otherwise (or set to
           # 'org"').
-          PROJECT_OWNER: ${{ vars.PROJECT_OWNER_TYPE || 'organization' }}/${{ vars.PROJECT_OWNER }}
+          PROJECT_OWNER: ${{ vars.PROJECT_OWNER_TYPE || 'organization' }}/${{ vars.PROJECT_OWNER || 'w3c' }}
           PROJECT_NUMBER: ${{ vars.PROJECT_NUMBER }}
 
           # W3C_API_KEY needs to be set to a valid W3C API token
