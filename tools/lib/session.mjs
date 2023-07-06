@@ -374,7 +374,7 @@ export async function updateSessionDescription(session) {
   const res = await sendGraphQLRequest(`mutation {
     updateIssue(input: {
       id: "${session.id}",
-      body: "${body.replace('"', '\\"').replace('\\', '\\\\')}"
+      body: "${body.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"
     }) {
       issue {
         id
