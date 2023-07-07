@@ -112,6 +112,18 @@ async function main(sessionNumber, changesFile) {
     console.log(`Assess need to add "check: instructions" label... done`);
   }
 
+  // No IRC channel provided, one will be created, let's add a
+  // "check: irc channel" label
+  if (!report.find(err => err.severity === 'error' && err.type === 'format') &&
+      !session.description.shortname) {
+    report.push({
+      session: sessionNumber,
+      severity: 'check',
+      type: 'irc channel',
+      messages: ['IRC channel was generated from the title']
+    });
+  }
+
   // Time to compute label changes.
   // All labels that are not checks, warnings, or errors are preserved.
   console.log();

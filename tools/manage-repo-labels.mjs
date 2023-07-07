@@ -23,6 +23,11 @@ const labels = [
     "color": "1D76DB"
   },
   {
+    "name": "check: irc channel",
+    "description": "IRC channel name was generated from the title. Remove label once name has been checked.",
+    "color": "1D76DB"
+  },
+  {
     "name": "error: chair conflict",
     "description": "Session scheduled at the same time as another session with an overlapping chair",
     "color": "B60205"
