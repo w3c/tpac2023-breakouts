@@ -131,6 +131,11 @@ async function main(sessionNumber, changesFile) {
   const newLabels = report
     .map(error => `${error.severity}: ${error.type}`)
     .sort();
+  if (session.labels.includes('check: irc channel') &&
+      !newLabels.includes('check: irc channel')) {
+    // Need to keep the 'check: irc channel' label until an admin removes it
+    newLabels.push('check: irc channel');
+  }
   await updateSessionLabels(session, project, newLabels);
   console.log(`Update labels on session... done`);
 
