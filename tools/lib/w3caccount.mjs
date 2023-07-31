@@ -21,22 +21,13 @@ export async function fetchW3CAccount(databaseId) {
     return Object.assign({}, cache[databaseId]);
   }
 
-  const W3C_API_KEY = await getEnvKey('W3C_API_KEY');
   const res = await fetch(
-    `https://api.w3.org/users/connected/github/${databaseId}`,
-    {
-      headers: {
-        Authorization: `W3C-API apikey="${W3C_API_KEY}"`
-      }
-    }
+    `https://api.w3.org/users/connected/github/${databaseId}`
   );
 
   if (res.status !== 200) {
     if (res.status >= 500) {
       throw new Error(`W3C API server error, ${res.status} status received`);
-    }
-    if (res.status === 403) {
-      throw new Error(`W3C API server reports that the API key is invalid, ${res.status} status received`);
     }
     if (res.status === 404) {
       return null;

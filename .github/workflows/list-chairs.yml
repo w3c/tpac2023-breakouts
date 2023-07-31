@@ -32,10 +32,6 @@ jobs:
           PROJECT_OWNER: ${{ vars.PROJECT_OWNER_TYPE || 'organization' }}/${{ vars.PROJECT_OWNER || 'w3c' }}
           PROJECT_NUMBER: ${{ vars.PROJECT_NUMBER }}
 
-          # W3C_API_KEY needs to be set to a valid W3C API token
-          # See: https://www.w3.org/users/myprofile/apikeys
-          W3C_API_KEY: ${{ secrets.W3C_API_KEY }}
-
           # A valid Personal Access Token (classic version) with project
           # and public_repo scope.
           GRAPHQL_TOKEN: ${{ secrets.GRAPHQL_TOKEN }}
