@@ -46,8 +46,8 @@ export async function initSectionHandlers() {
         serialize: value => value
       };
       if (section.type === 'dropdown') {
-        handler.options = section.attributes.options;
-        handler.validate = value => handler.options.includes(value);
+        handler.options = section.attributes.options.map(o => o.toLowerCase());
+        handler.validate = value => handler.options.includes(value.toLowerCase());
       }
       else if (section.type === 'input') {
         handler.validate = value => !value.match(/\n/)
@@ -62,6 +62,12 @@ export async function initSectionHandlers() {
 
       case 'description':
         // TODO: validate that markdown remains simple enough
+        break;
+
+      case 'goal':
+        // Relax, people may use markdown after all
+        // TODO: validate that markdown remains simple enough
+        handler.validate = value => true;
         break;
 
       case 'chairs':
@@ -106,14 +112,14 @@ export async function initSectionHandlers() {
         break;
 
       case 'attendance':
-        handler.parse = value => value === 'Restricted to TPAC registrants' ?
+        handler.parse = value => value.toLowerCase() === 'restricted to tpac registrants' ?
           'restricted' : 'public';
         handler.serialize = value => value === 'restricted' ?
           'Restricted to TPAC registrants' : 'Anyone may attend (Default)';
         break;
 
       case 'duration':
-        handler.parse = value => value === '30 minutes' ? 30 : 60;
+        handler.parse = value => value.toLowerCase() === '30 minutes' ? 30 : 60;
         handler.serialize = value => value === 30 ? '30 minutes' : '60 minutes (Default)';
         break;
 
@@ -135,11 +141,12 @@ export async function initSectionHandlers() {
 
       case 'capacity':
         handler.parse = value => {
-          switch (value) {
-          case 'Don\'t know (Default)': return 0;
-          case 'Fewer than 20 people': return 15;
+          switch (value.toLowerCase()) {
+          case 'don\'t know': return 0;
+          case 'don\'t know (default)': return 0;
+          case 'fewer than 20 people': return 15;
           case '20-45 people': return 30;
-          case 'More than 45 people': return 50;
+          case 'more than 45 people': return 50;
           };
         };
         handler.serialize = value => {
