@@ -20,6 +20,39 @@ let sectionHandlers = null;
 
 
 /**
+ * The issue template asks proposers to use comma- or space-separated lists, or
+ * impose the list format. In practice, regardless of what we ask for or try to
+ * impose, proposers often mix that with other markdown constructs for lists.
+ * This function tries to handle all possibilities.
+ *
+ * The `spaceSeparator` option tells the function to split tokens on spaces.
+ * The `prefix` option is only useful when `spaceSeparator` is set. It tells
+ * the function to only split tokens on spaces provided that the value starts
+ * with the provided prefix. This is useful to parse a list that, e.g., mixes
+ * GitHub identities and actual names:
+ *   - @tidoust @ianbjacobs
+ *   - John Doe
+ */
+function parseList(value, { spaceSeparator = false, prefix = null }) {
+  return (value || '')
+    .split(/[\n,]/)
+    .map(token => token.trim())
+    .map(token => token.replace(/^(?:[-\+\*]|\d+[\.\)])\s*(.*)$/, '$1'))
+    .map(token => token.trim())
+    .filter(token => !!token)
+    .map(token => {
+      if (spaceSeparator) {
+        if (!prefix || token.startsWith(prefix)) {
+          return token.split(/\s+/);
+        }
+      }
+      return token;
+    })
+    .flat();
+}
+
+
+/**
  * Populate the list of section handlers from the info in `session.yml`.
  *
  * The function needs to be called once before `parseSessionBody` or
@@ -74,32 +107,17 @@ export async function initSectionHandlers() {
         // List of GitHub identities... or of actual names
         // Space-separated values are possible when there are only GitHub
         // identities. Otherwise, CSV, line-separated or markdown lists.
-        handler.parse = value => value
-          .split(/[\n,]/)
-          .map(nick => nick.trim())
-          .map(nick => nick.replace(/^-\s*(.*)$/, '$1'))
-          .filter(nick => !!nick)
+        handler.parse = value => parseList(value, { spaceSeparator: true, prefix: '@' })
           .map(nick => {
             if (nick.startsWith('@')) {
-              return nick
-                .split(/\s/)
-                .map(n => n.trim())
-                .map(n => { return { login: n.substring(1) }; });
+              return { login: nick.substring(1) };
             }
             else {
               return { name: nick };
             }
-          })
-          .flat();
+          });
         handler.validate = value => {
-          const chairs = value
-            .split(/[\n,]/)
-            .map(nick => nick.trim())
-            .map(nick => nick.replace(/^-\s*(.*)$/, '$1'))
-            .filter(nick => !!nick)
-            // TODO: If space-separated list, all nicks must start with "@"
-            .map(nick => nick.startsWith('@') ? nick.split(/\s/) : nick)
-            .flat();
+          const chairs = parseList(value, { spaceSeparator: true, prefix: '@' });
           return chairs.every(nick => nick.match(/^(@[A-Za-z0-9][A-Za-z0-9\-]+|[^@]+)$/));
         }
         handler.serialize = value => value
@@ -125,15 +143,10 @@ export async function initSectionHandlers() {
 
       case 'conflicts':
         // List of GitHub issues
-        handler.parse = value => value.split(/[\s,]/)
-          .map(issue => issue.trim())
-          .filter(issue => !!issue)
+        handler.parse = value => parseList(value, { spaceSeparator: true, prefix: '#' })
           .map(issue => parseInt(issue.substring(1), 10));
         handler.validate = value => {
-          const conflictingSessions = value
-            .split(/[\s,]/)
-            .map(issue => issue.trim())
-            .filter(issue => !!issue);
+          const conflictingSessions = parseList(value, { spaceSeparator: true, prefix: '#' });
           return conflictingSessions.every(issue => issue.match(/^#\d+$/));
         };
         handler.serialize = value => value.map(issue => `#${issue}`).join(', ');
@@ -163,22 +176,18 @@ export async function initSectionHandlers() {
         const capitalize = str => str.slice(0, 1).toUpperCase() + str.slice(1);
         handler.parse = value => {
           const materials = {};
-          value.split('\n')
-            .map(line => line.trim())
-            .filter(line => !!line)
+          parseList(value, { spaceSeparator: false })
             .map(line =>
-              line.match(/^-\s+(Agenda|Slides|Minutes|Calendar):\s*(.*)$/i) ??
-              line.match(/^-\s+\[(Agenda|Slides|Minutes|Calendar)\]\((.*)\)$/i))
+              line.match(/^(Agenda|Slides|Minutes|Calendar):\s*(.*)$/i) ??
+              line.match(/^\[(Agenda|Slides|Minutes|Calendar)\]\((.*)\)$/i))
             .forEach(match => materials[match[1].toLowerCase()] = match[2]);
           return materials;
         };
         handler.validate = value => {
-          const matches = value.split('\n')
-            .map(line => line.trim())
-            .filter(line => !!line)
+          const matches = parseList(value, { spaceSeparator: false })
             .map(line =>
-              line.match(/^-\s+(Agenda|Slides|Minutes|Calendar):\s*(.*)$/i) ||
-              line.match(/^-\s+\[(Agenda|Slides|Minutes|Calendar)\]\((.*)\)$/i));
+              line.match(/^(Agenda|Slides|Minutes|Calendar):\s*(.*)$/i) ||
+              line.match(/^\[(Agenda|Slides|Minutes|Calendar)\]\((.*)\)$/i));
           return matches.every(match => {
             if (!match) {
               return false;
