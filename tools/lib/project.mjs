@@ -194,12 +194,13 @@ export async function fetchProject(login, id) {
     roomsFieldId: rooms.data[type].projectV2.field.id,
     rooms: rooms.data[type].projectV2.field.options.map(room => {
       const match =
-        room.name.match(/(.*) \((\d+)\)$/) ??
-        [room.name, room.name, '30'];
+        room.name.match(/(.*) \((\d+)\s*(?:\-\s*([^\)]+))?\)$/) ??
+        [room.name, room.name, '30', undefined];
       return {
         id: room.id,
         name: match[0],
         label: match[1],
+        location: match[3] ?? '',
         capacity: parseInt(match[2], 10)
       };
     }),

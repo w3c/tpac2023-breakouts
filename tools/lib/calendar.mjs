@@ -180,7 +180,8 @@ async function fillCalendarEntry({ page, session, project, status, zoom }) {
   await fillTextInput('textarea#event_description', session.description.description);
 
   const room = project.rooms.find(room => room.name === session.room);
-  await fillTextInput('input#event_location', room?.label ?? '');
+  const roomLocation = (room?.label ?? '') + (room?.location ? ' - ' + room.location : '');
+  await fillTextInput('input#event_location', roomLocation ?? '');
 
   await clickOnElement('input#event_visibility_' + (session.description.attendance === 'restricted' ? '1' : '0'));
 
