@@ -154,6 +154,7 @@ async function main({ preserve, except, apply, seed }) {
   function chooseSlot(session, after = { pos: -1 }) {
     // Keep assigned slot if so requested
     if (session.slot && preserve.includes(session.number)) {
+      const slot = slots.find(slot => slot.name === session.slot);
       return;
     }
 
@@ -225,13 +226,18 @@ async function main({ preserve, except, apply, seed }) {
     // Keep assigned room if so requested
     // and no way to choose a room if slot has not been set yet!
     if (session.room && preserve.includes(session.number)) {
-      return;
+      const room = rooms.find(room => room.name === session.room);
+      // Make sure the room is not already occupied during that slot
+      if (room.sessions.find(s => s.slot === session.slot)) {
+        return;
+      }
+      return room;
     }
     if (!session.slot) {
       return;
     }
 
-    // Find the session in the same that has the largest
+    // Find the session in the same track that has the largest
     // room capacity needs
     const largestSession = track ?
       sessions
@@ -248,6 +254,10 @@ async function main({ preserve, except, apply, seed }) {
         if (room.capacity < largestSession.description.capacity) {
           return false;
         }
+      }
+      // Make sure the room is not already occupied during that slot
+      if (room.sessions.find(s => s.slot === session.slot)) {
+        return false;
       }
       return true;
     });
