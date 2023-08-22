@@ -18,6 +18,10 @@ import { fetchW3CAccount } from './w3caccount.mjs';
  * The object may only contain the GitHub login or the W3C account name.
  */
 export async function fetchSessionChairs(session, chairs2W3CID) {
+  const lcChairs2W3CID = {};
+  for (const name of Object.keys(chairs2W3CID ?? {})) {
+    lcChairs2W3CID[name.toLowerCase()] = chairs2W3CID[name];
+  }
   const chairs = [];
   if (session.author) {
     const w3cAccount = await fetchW3CAccount(session.author.databaseId);
@@ -31,8 +35,8 @@ export async function fetchSessionChairs(session, chairs2W3CID) {
       chair.name = w3cAccount.name;
       chair.email = w3cAccount.email;
     }
-    else if (chairs2W3CID?.[session.author.login]) {
-      chair.w3cId = chairs2W3CID[session.author.login];
+    else if (lcChairs2W3CID[session.author.login.toLowerCase()]) {
+      chair.w3cId = lcChairs2W3CID[session.author.login.toLowerCase()];
       chair.name = session.author.login;
     }
     chairs.push(chair);
@@ -57,14 +61,14 @@ export async function fetchSessionChairs(session, chairs2W3CID) {
             chair.name = w3cAccount.name;
             chair.email = w3cAccount.email;
           }
-          else if (chairs2W3CID?.[chair.login]) {
-            chair.w3cId = chairs2W3CID[chair.login];
+          else if (lcChairs2W3CID[chair.login.toLowerCase()]) {
+            chair.w3cId = lcChairs2W3CID[chair.login.toLowerCase()];
             chair.name = chair.login;
           }
         }
       }
-      else if (chairs2W3CID?.[chair.name]) {
-        chair.w3cId = chairs2W3CID[chair.name];
+      else if (lcChairs2W3CID[chair.name.toLowerCase()]) {
+        chair.w3cId = lcChairs2W3CID[chair.name.toLowerCase()];
       }
       chairs.push(chair);
     }
