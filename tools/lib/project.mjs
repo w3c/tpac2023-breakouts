@@ -24,6 +24,11 @@ import { sendGraphQLRequest } from './graphql.mjs';
  *     { "id": "xxxxxxx", "name": "9:30 - 10:30", "start": "9:30", "end": "10:30", "duration": 60 },
  *     ...
  *   ],
+ *   "severityFieldIds": {
+ *     "check": "xxxxxxx",
+ *     "warning": "xxxxxxx",
+ *     "error": "xxxxxxx"
+ *   },
  *   "sessions": [
  *     {
  *       "repository": "w3c/tpacxxxx-breakouts",
@@ -63,7 +68,7 @@ export async function fetchProject(login, id) {
   login = (tokens.length === 2) ? tokens[1] : login;
 
   // Retrieve information about the list of rooms
-  const rooms = await sendGraphQLRequest(`query {
+  const roomsResponse = await sendGraphQLRequest(`query {
     ${type}(login: "${login}"){
       projectV2(number: ${id}) {
         id
@@ -85,9 +90,11 @@ export async function fetchProject(login, id) {
       }
     }
   }`);
+  const project = roomsResponse.data[type].projectV2
+  const rooms = project.field;
 
   // Similar request to list time slots
-  const slots = await sendGraphQLRequest(`query {
+  const slotsResponse = await sendGraphQLRequest(`query {
     ${type}(login: "${login}"){
       projectV2(number: ${id}) {
         field(name: "Slot") {
@@ -105,9 +112,28 @@ export async function fetchProject(login, id) {
       }
     }
   }`);
+  const slots = slotsResponse.data[type].projectV2.field;
 
-  // Third request to retrieve the list of sessions associated with the project.
-  const sessions = await sendGraphQLRequest(`query {
+  // Similar requests to get the ids of the custom fields used for validation
+  const severityFieldIds = {};
+  for (const severity of ['Error', 'Warning', 'Check']) {
+    const response = await sendGraphQLRequest(`query {
+      ${type}(login: "${login}"){
+        projectV2(number: ${id}) {
+          field(name: "${severity}") {
+            ... on ProjectV2FieldCommon {
+              id
+              name
+            }
+          }
+        }
+      }
+    }`);
+    severityFieldIds[severity] = response.data[type].projectV2.field.id;
+  }
+
+  // Another request to retrieve the list of sessions associated with the project.
+  const sessionsResponse = await sendGraphQLRequest(`query {
     ${type}(login: "${login}") {
       projectV2(number: ${id}) {
         items(first: 100) {
@@ -144,12 +170,20 @@ export async function fetchProject(login, id) {
                 lastEditedAt
               }
             }
-            fieldValues(first: 5) {
+            fieldValues(first: 10) {
               nodes {
                 ... on ProjectV2ItemFieldSingleSelectValue {
                   name
                   field {
                     ... on ProjectV2SingleSelectField {
+                      name
+                    }
+                  }
+                }
+                ... on ProjectV2ItemFieldTextValue {
+                  text
+                  field {
+                    ... on ProjectV2FieldCommon {
                       name
                     }
                   }
@@ -161,9 +195,10 @@ export async function fetchProject(login, id) {
       }
     }
   }`);
+  const sessions = sessionsResponse.data[type].projectV2.items.nodes;
 
-  const repository = sessions.data[type].projectV2.items.nodes[0].content.repository;
-  const labels = await sendGraphQLRequest(`query {
+  const repository = sessions[0].content.repository;
+  const labelsResponse = await sendGraphQLRequest(`query {
     repository(owner: "${repository.owner.login}", name: "${repository.name}") {
       labels(first: 50) {
         nodes {
@@ -173,26 +208,27 @@ export async function fetchProject(login, id) {
       }
     }
   }`);
+  const labels = labelsResponse.data.repository.labels.nodes;
 
   // Let's combine and flatten the information a bit
   return {
     // Project's title and URL are more for internal reporting purpose.
-    title: rooms.data[type].projectV2.title,
-    url: rooms.data[type].projectV2.url,
-    id: rooms.data[type].projectV2.id,
+    title: project.title,
+    url: project.url,
+    id: project.id,
 
     // Project's description should help us extract additional metadata:
     // - the date of the breakout sessions
     // - the timezone to use to interpret time slots
     // - the "big meeting" value to associate calendar entries to TPAC
-    metadata: parseProjectDescription(rooms.data[type].projectV2.shortDescription),
+    metadata: parseProjectDescription(project.shortDescription),
 
     // List of rooms. For each of them, we return the exact name of the option
     // for the "Room" custom field in the project (which should include the
     // room's capacity), the actual name of the room without the capacity, and
     // the room's capacity in number of seats.
-    roomsFieldId: rooms.data[type].projectV2.field.id,
-    rooms: rooms.data[type].projectV2.field.options.map(room => {
+    roomsFieldId: rooms.id,
+    rooms: rooms.options.map(room => {
       const match =
         room.name.match(/(.*) \((\d+)\s*(?:\-\s*([^\)]+))?\)$/) ??
         [room.name, room.name, '30', undefined];
@@ -205,11 +241,14 @@ export async function fetchProject(login, id) {
       };
     }),
 
+    // IDs of custom fields used to store validation problems
+    severityFieldIds: severityFieldIds,
+
     // List of slots. For each of them, we return the exact name of the option
     // for the "Slot" custom field in the project, the start and end times and
     // the duration in minutes.
-    slotsFieldId: slots.data[type].projectV2.field.id,
-    slots: slots.data[type].projectV2.field.options.map(slot => {
+    slotsFieldId: slots.id,
+    slots: slots.options.map(slot => {
       const times = slot.name.match(/^(\d+):(\d+)\s*-\s*(\d+):(\d+)$/) ??
         [null, '00', '00', '01', '00'];
       return {
@@ -227,7 +266,7 @@ export async function fetchProject(login, id) {
     // issues that have been associated with the project). For each session, we
     // return detailed information, including its title, full body, author,
     // labels, and the room and slot that may already have been assigned.
-    sessions: sessions.data[type].projectV2.items.nodes
+    sessions: sessions
       .filter(session => session.content.state === 'OPEN')
       .map(session => {
         return {
@@ -250,12 +289,17 @@ export async function fetchProject(login, id) {
             .find(value => value.field?.name === 'Room')?.name,
           slot: session.fieldValues.nodes
             .find(value => value.field?.name === 'Slot')?.name,
+          validation: {
+            check: session.fieldValues.nodes.find(value => value.field?.name === 'Check')?.text,
+            warning: session.fieldValues.nodes.find(value => value.field?.name === 'Warning')?.text,
+            error: session.fieldValues.nodes.find(value => value.field?.name === 'Error')?.text
+          }
         };
       }),
 
       // Labels defined in the associated repository
       // (note all sessions should belong to the same repository!)
-      labels: labels.data.repository.labels.nodes
+      labels: labels
   };
 }
 
@@ -318,6 +362,34 @@ export async function assignSessionsToSlotAndRoom(session, project) {
   if (!resRoom?.data?.updateProjectV2ItemFieldValue?.clientMutationId) {
     console.log(JSON.stringify(resRoom, null, 2));
     throw new Error(`GraphQL error, could not assign session #${session.number} to room ${session.room}`);
+  }
+}
+
+
+/**
+ * Record session validation problems
+ */
+export async function saveSessionValidationResult(session, project) {
+  for (const severity of ['Check', 'Warning', 'Error']) {
+    const fieldId = project.severityFieldIds[severity];
+    const value = session.validation[severity.toLowerCase()] ?? '';
+    const response = await sendGraphQLRequest(`mutation {
+      updateProjectV2ItemFieldValue(input: {
+        clientMutationId: "mutatis mutandis",
+        fieldId: "${fieldId}",
+        itemId: "${session.projectItemId}",
+        projectId: "${project.id}",
+        value: {
+          text: "${value}"
+        }
+      }) {
+        clientMutationId
+      }
+    }`);
+    if (!response?.data?.updateProjectV2ItemFieldValue?.clientMutationId) {
+      console.log(JSON.stringify(response, null, 2));
+      throw new Error(`GraphQL error, could not record "${severity}" for session #${session.number}`);
+    }
   }
 }
 

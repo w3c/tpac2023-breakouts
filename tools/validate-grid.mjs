@@ -1,8 +1,8 @@
 /**
- * This tool validates the grid and sets a few labels accordingly. Unless user
- * requests full re-validation of the sessions, labels managed by the tool are
- * those related to scheduling problems (in other words, problems that may
- * arise when an admin chooses a room and slot).
+ * This tool validates the grid and sets a few validation results accordingly.
+ * Unless user requests full re-validation of the sessions, validation results
+ * managed by the tool are those related to scheduling problems (in other words,
+ * problems that may arise when an admin chooses a room and slot).
  *
  * To run the tool:
  *
@@ -13,9 +13,8 @@
  */
 
 import { getEnvKey } from './lib/envkeys.mjs';
-import { fetchProject } from './lib/project.mjs'
+import { fetchProject, saveSessionValidationResult } from './lib/project.mjs'
 import { validateGrid } from './lib/validate.mjs';
-import { updateSessionLabels } from './lib/session.mjs';
 import { sendGraphQLRequest } from './lib/graphql.mjs';
 
 const schedulingErrors = [
@@ -42,7 +41,6 @@ async function main(validation) {
   console.log(`- ${project.sessions.length} sessions`);
   console.log(`- ${project.rooms.length} rooms`);
   console.log(`- ${project.slots.length} slots`);
-  console.log(`- ${project.labels.length} labels`);
   console.log(`Retrieve project ${PROJECT_OWNER}/${PROJECT_NUMBER}... done`);
 
   console.log();
@@ -52,23 +50,38 @@ async function main(validation) {
   console.log(`- ${errors.length} problems found`);
   console.log(`Validate grid... done`);
 
-  // Time to compute label changes for each session
+  // Time to record session validation issues
   const sessions = [... new Set(errors.map(error => error.session))]
     .map(number => project.sessions.find(s => s.number === number));
   for (const session of sessions) {
     console.log();
-    console.log(`Update labels on session ${session.number}...`);
-    const newLabels = errors
-      .filter(error => error.session === session.number)
-      .map(error => `${error.severity}: ${error.type}`)
-      .sort();
-      if (session.labels.includes('check: irc channel') &&
-          !newLabels.includes('check: irc channel')) {
-        // Need to keep the 'check: irc channel' label until an admin removes it
-        newLabels.push('check: irc channel');
+    console.log(`Save validation results for session ${session.number}...`);
+    for (const severity of ['Error', 'Warning', 'Check']) {
+      let results = errors
+        .filter(error => error.session === session.number && error.severity === severity.toLowerCase())
+        .map(error => error.type);
+      if (severity === 'Check' &&
+          session.validation.check?.includes('irc channel') &&
+          !results.includes('irc channel')) {
+        // Need to keep the 'irc channel' value until an admin removes it
+        results.push('irc channel');
       }
-    await updateSessionLabels(session, project, newLabels);
-    console.log(`Update labels on session ${session.number}... done`);
+      if (validation !== 'everything' && session.validation[severity.toLowerCase()]) {
+        // Need to preserve previous results that touched on other aspects
+        const previousResults = session.validation[severity.toLowerCase()]
+          .split(',')
+          .map(value = value.trim());
+        for (const result of previousResults) {
+          if (!schedulingErrors.includes(`${severity.toLowerCase()}: ${result}`)) {
+            results.push(result);
+          }
+        }
+      }
+      results = results.sort();
+      session.validation[severity.toLowerCase()] = results.join(', ');
+    }
+    await saveSessionValidationResult(session, project);
+    console.log(`Save validation results for session ${session.number}... done`);
   }
 }
 

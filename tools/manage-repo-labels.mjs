@@ -18,79 +18,9 @@ import { sendGraphQLRequest } from './lib/graphql.mjs';
 
 const labels = [
   {
-    "name": "check: instructions",
-    "description": "Proposal has instructions for meeting planners. Remove label once they have been checked.",
-    "color": "1D76DB"
-  },
-  {
-    "name": "check: irc channel",
-    "description": "IRC channel name was generated from the title. Remove label once name has been checked.",
-    "color": "1D76DB"
-  },
-  {
-    "name": "error: chair conflict",
-    "description": "Session scheduled at the same time as another session with an overlapping chair",
-    "color": "B60205"
-  },
-  {
-    "name": "error: chairs",
-    "description": "Cannot retrieve the W3C account of a session chair",
-    "color": "B60205"
-  },
-  {
-    "name": "error: conflict",
-    "description": "Conflicting issue is not a breakout session proposal",
-    "color": "B60205"
-  },
-  {
-    "name": "error: format",
-    "description": "Issue cannot be parsed by automatic job due to some formatting issue",
-    "color": "B60205"
-  },
-  {
-    "name": "error: scheduling",
-    "description": "Session scheduled in same room and at the same time as another session",
-    "color": "B60205"
-  },
-  {
     "name": "session",
     "description": "Breakout session proposal",
     "color": "C2E0C6"
-  },
-  {
-    "name": "warning: agenda",
-    "description": "No agenda link whereas session is around the corner (or past already)",
-    "color": "FBCA04"
-  },
-  {
-    "name": "warning: capacity",
-    "description": "Session room is smaller than requested capacity",
-    "color": "FBCA04"
-  },
-  {
-    "name": "warning: conflict",
-    "description": "Session scheduled at the same time as another session identified as conflicting",
-    "color": "FBCA04"
-  },
-  {
-    "name": "warning: duration",
-    "description": "Session scheduled during a 30mn slot but 60mn was preferred",
-    "color": "FBCA04"
-  },
-  {
-    "name": "warning: minutes",
-    "description": "No link to the minutes whereas session is past",
-    "color": "FBCA04"
-  },
-  {
-    "name": "warning: minutes origin",
-    "description": "Minutes are not stored on www.w3.org",
-    "color": "FBCA04"
-  },
-  {
-    "name": "warning: track",
-    "description": "Session scheduled at the same time as another session in the same track",
-    "color": "FBCA04"
   }
 ];
 

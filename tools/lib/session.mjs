@@ -316,74 +316,7 @@ ${(description[handler.id] || description[handler.id] === 0) ?
 
 
 /**
- * Update session labels
- */
-export async function updateSessionLabels(session, project, newLabels) {
-  const sessionLabels = session.labels
-    .filter(s =>
-      s.startsWith('check: ') ||
-      s.startsWith('warning: ') ||
-      s.startsWith('error: '))
-    .sort();
-  console.log(`- session should have ${['session'].concat(newLabels).join(', ')}`);
-  console.log(`- session already has ${['session'].concat(sessionLabels).join(', ')}`);
-
-  const labelsToAdd = newLabels
-    .filter(label => !sessionLabels.includes(label))
-    .map(label => project.labels.find(l => l.name === label).id);
-  if (labelsToAdd.length > 0) {
-    console.log(`- add label ids ${labelsToAdd.join(', ')}`);
-    const res = await sendGraphQLRequest(`mutation {
-      addLabelsToLabelable(input: {
-        labelableId: "${session.id}",
-        labelIds: ${JSON.stringify(labelsToAdd)}
-      }) {
-        labelable {
-          ...on Issue {
-            id
-          }
-        }
-      }
-    }`);
-    if (!res?.data?.addLabelsToLabelable?.labelable?.id) {
-      console.log(JSON.stringify(res, null, 2));
-      throw new Error(`GraphQL error, could not add labels`);
-    }
-  }
-  else {
-    console.log(`- no label to add`);
-  }
-
-  const labelsToRemove = sessionLabels
-    .filter(label => label !== 'session' && !newLabels.includes(label))
-    .map(label => project.labels.find(l => l.name === label).id);
-  if (labelsToRemove.length > 0) {
-    console.log(`- remove label ids ${labelsToRemove.join(', ')}`);
-    const res = await sendGraphQLRequest(`mutation {
-      removeLabelsFromLabelable(input: {
-        labelableId: "${session.id}",
-        labelIds: ${JSON.stringify(labelsToRemove)}
-      }) {
-        labelable {
-          ...on Issue {
-            id
-          }
-        }
-      }
-    }`);
-    if (!res?.data?.removeLabelsFromLabelable?.labelable?.id) {
-      console.log(JSON.stringify(res, null, 2));
-      throw new Error(`GraphQL error, could not remove labels`);
-    }
-  }
-  else {
-    console.log(`- no label to remove`);
-  }
-}
-
-
-/**
- * Update session labels
+ * Update session description
  */
 export async function updateSessionDescription(session) {
   const body = serializeSessionDescription(session.description);

@@ -1,5 +1,6 @@
 /**
- * This tool validates a session issue and manages labels accordingly.
+ * This tool validates a session issue and manages validation results in the
+ * project accordingly.
  *
  * To run the tool:
  *
@@ -20,9 +21,9 @@
  */
 
 import { getEnvKey } from './lib/envkeys.mjs';
-import { fetchProject } from './lib/project.mjs'
+import { fetchProject, saveSessionValidationResult } from './lib/project.mjs'
 import { validateSession } from './lib/validate.mjs';
-import { parseSessionBody, updateSessionLabels, updateSessionDescription } from './lib/session.mjs';
+import { parseSessionBody, updateSessionDescription } from './lib/session.mjs';
 import { sendGraphQLRequest } from './lib/graphql.mjs';
 
 /**
@@ -54,7 +55,6 @@ async function main(sessionNumber, changesFile) {
   console.log(`- ${project.sessions.length} sessions`);
   console.log(`- ${project.rooms.length} rooms`);
   console.log(`- ${project.slots.length} slots`);
-  console.log(`- ${project.labels.length} labels`);
   project.chairsToW3CID = CHAIR_W3CID;
   console.log(`Retrieve project ${PROJECT_OWNER}/${PROJECT_NUMBER}... done`);
 
@@ -69,14 +69,14 @@ async function main(sessionNumber, changesFile) {
   const checkComments = report.find(error =>
     error.severity === 'check' && error.type === 'instructions');
   if (checkComments &&
-      !session.labels.includes('check: instructions') &&
+      !session.validation.check?.includes('instructions') &&
       changesFile) {
     // The session contains comments and does not have a "check: instructions"
-    // label. That said, an admin may already have validated these comments
-    // (and removed the label). We should only add it back if the comments
+    // flag. That said, an admin may already have validated these comments
+    // (and removed the flag). We should only add it back if the comments
     // section changed.
     console.log();
-    console.log(`Assess need to add "check: instructions" label...`);
+    console.log(`Assess need to add "check: instructions" flag...`);
 
     // Read JSON file that describes changes if one was given
     // (needs to contain a dump of `github.event.changes` when run in a job)
@@ -85,7 +85,7 @@ async function main(sessionNumber, changesFile) {
       { assert: { type: 'json' } }
     );
     if (!changes.body?.from) {
-      console.log(`- no previous version of session body, add label`);
+      console.log(`- no previous version of session body, add flag`);
     }
     else {
       console.log(`- previous version of session body found`);
@@ -93,27 +93,27 @@ async function main(sessionNumber, changesFile) {
         const previousDescription = parseSessionBody(changes.body.from);
         const newDescription = parseSessionBody(session.body);
         if (newDescription.comments === previousDescription.comments) {
-          console.log(`- no change in comments section, no need to add label`);
+          console.log(`- no change in comments section, no need to add flag`);
           report = report.filter(error =>
             !(error.severity === 'check' && error.type === 'instructions'));
         }
         else {
-          console.log(`- comments section changed, add label`);
+          console.log(`- comments section changed, add flag`);
         }
       }
       catch {
         // Previous version could not be parsed. Well, too bad, let's add
-        // the "check: comments" label then.
+        // the "check: comments" flag then.
         // TODO: consider doing something smarter as broken format errors
         // will typically arise when author adds links to agenda/minutes.
-        console.log(`- previous version of session body could not be parsed, add label`);
+        console.log(`- previous version of session body could not be parsed, add flag`);
       }
     }
-    console.log(`Assess need to add "check: instructions" label... done`);
+    console.log(`Assess need to add "check: instructions" flag... done`);
   }
 
   // No IRC channel provided, one will be created, let's add a
-  // "check: irc channel" label
+  // "check: irc channel" flag
   if (!report.find(err => err.severity === 'error' && err.type === 'format') &&
       !session.description.shortname) {
     report.push({
@@ -124,20 +124,25 @@ async function main(sessionNumber, changesFile) {
     });
   }
 
-  // Time to compute label changes.
-  // All labels that are not checks, warnings, or errors are preserved.
+  // Time to record session validation issues
   console.log();
-  console.log(`Update labels on session...`);
-  const newLabels = report
-    .map(error => `${error.severity}: ${error.type}`)
-    .sort();
-  if (session.labels.includes('check: irc channel') &&
-      !newLabels.includes('check: irc channel')) {
-    // Need to keep the 'check: irc channel' label until an admin removes it
-    newLabels.push('check: irc channel');
+  console.log(`Save session validation results...`);
+  for (const severity of ['Error', 'Warning', 'Check']) {
+    let results = report
+      .filter(error => error.severity === severity.toLowerCase())
+      .map(error => error.type)
+      .sort();
+    if (severity === 'Check' &&
+        session.validation.check?.includes('irc channel') &&
+        !results.includes('irc channel')) {
+      // Need to keep the 'irc channel' value until an admin removes it
+      results.push('irc channel');
+      results = results.sort();
+    }
+    session.validation[severity.toLowerCase()] = results.join(', ');
   }
-  await updateSessionLabels(session, project, newLabels);
-  console.log(`Update labels on session... done`);
+  await saveSessionValidationResult(session, project);
+  console.log(`Save session validation results... done`);
 
   // Prefix IRC channel with '#' if not already done
   if (!report.find(err => err.severity === 'error' && err.type === 'format') &&
