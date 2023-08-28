@@ -9,11 +9,15 @@
 import { getEnvKey } from './lib/envkeys.mjs';
 import { fetchProject } from './lib/project.mjs'
 import { validateGrid } from './lib/validate.mjs';
+import { authenticate } from './lib/calendar.mjs';
+import puppeteer from 'puppeteer';
 
 async function main() {
   const PROJECT_OWNER = await getEnvKey('PROJECT_OWNER');
   const PROJECT_NUMBER = await getEnvKey('PROJECT_NUMBER');
   const CHAIR_W3CID = await getEnvKey('CHAIR_W3CID', {}, true);
+  const W3C_LOGIN = await getEnvKey('W3C_LOGIN');
+  const W3C_PASSWORD = await getEnvKey('W3C_PASSWORD');
   console.log();
   console.log(`Retrieve project ${PROJECT_OWNER}/${PROJECT_NUMBER}...`);
   const project = await fetchProject(PROJECT_OWNER, PROJECT_NUMBER);
@@ -48,6 +52,36 @@ async function main() {
       parts.push(`https://www.w3.org/users/${chair.w3cId}`);
     }
     return parts.join(' ');
+  }
+
+  if (W3C_LOGIN && W3C_PASSWORD) {
+    console.log();
+    console.log('Retrieving chair emails...');
+    const browser = await puppeteer.launch({ headless: true });
+    try {
+      for (const chair of chairs) {
+        if (!chair.w3cId) {
+          continue;
+        }
+        const page = await browser.newPage();
+        const url = `https://www.w3.org/users/${chair.w3cId}/`;
+        try {
+          await page.goto(url);
+          await authenticate(page, W3C_LOGIN, W3C_PASSWORD, url);
+          chair.email = await page.evaluate(() => {
+            const el = document.querySelector('.card--user a[href^=mailto]');
+            return el.textContent.trim();
+          });
+        }
+        finally {
+          page.close();
+        }
+      }
+    }
+    finally {
+      browser.close();
+    }
+    console.log('Retrieving chair emails... done');
   }
 
   console.log();
