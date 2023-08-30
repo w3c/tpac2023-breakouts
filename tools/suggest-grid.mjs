@@ -172,8 +172,7 @@ async function main({ preserve, except, apply, seed }) {
       }
     });
 
-    // Find first non-conflicting slot
-    const slot = possibleSlots.find(slot => {
+    function isNonConflictingSlot(slot, { relaxDuration }) {
       const potentialConflicts = sessions.filter(s => s.slot === slot.name);
       // There must be no session in the same track at that time
       const trackConflict = potentialConflicts.find(s =>
@@ -202,12 +201,21 @@ async function main({ preserve, except, apply, seed }) {
       }
 
       // Meet duration preference
-      if (slot.duration !== session.description.duration) {
+      if ((!relaxDuration && slot.duration !== session.description.duration) ||
+          (relaxDuration && slot.duration < session.description.duration)) {
         return false;
       }
 
       return true;
-    });
+    }
+
+    // Find first non-conflicting slot
+    // (In 2023, we let people request 30mn slot, but then only scheduled 60mn
+    // slots. Hence the need to relax the constraint if there aren't any slots
+    // with the requested duration)
+    const slot =
+      possibleSlots.find(slot => isNonConflictingSlot(slot, { relaxDuration: false })) ??
+      possibleSlots.find(slot => isNonConflictingSlot(slot, { relaxDuration: true }));
 
     if (slot) {
       session.slot = slot.name;
