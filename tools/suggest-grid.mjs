@@ -499,6 +499,9 @@ async function main({ preserve, except, apply, seed }) {
 		  // This version prints all conflict info if we want that
                   // console.log("<p><b>Conflicts</b>: " + session.description.conflicts.map(s => confs.includes(s) ? '<span class="conflict-error">' + s + '</span>' : s).join(', ') + "</p>");
 	      }
+	      if (sloterrors.includes('capacity-error')) {
+              console.log('<p><b>Capacity</b>: ' + session.description.capacity + '</p>');
+	      }
               console.log('</td>');
 	  }
       }	 
