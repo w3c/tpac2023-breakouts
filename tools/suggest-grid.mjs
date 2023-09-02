@@ -509,7 +509,7 @@ async function main({ preserve, except, apply, seed }) {
   let unscheduled = sessions.filter(s => !s.slot && !s.room);
   if (unscheduled.length) {
      console.log('<h2>Unscheduled sessions</h2>\n');
-     console.log('<p>' + unscheduled.map(s => '#' + s.number) + '</p>');
+     console.log('<p>' + unscheduled.map(s => '#' + s.number).join(', ') + '</p>');
      }	
   console.log('</body>\n</html>\n');
     
