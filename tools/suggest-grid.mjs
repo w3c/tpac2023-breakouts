@@ -94,7 +94,6 @@ async function main({ preserve, except, apply, seed }) {
   sessions = sessions.filter(s => !!s);
   sessions.sort((s1, s2) => s1.number - s2.number);
   console.warn(`- found ${sessions.length} valid sessions among them: ${sessions.map(s => s.number).join(', ')}`);
-  seed = seed ?? makeseed();
   shuffle(sessions, seed);
   console.warn(`- shuffled sessions with seed "${seed}" to: ${sessions.map(s => s.number).join(', ')}`);
   console.warn(`Retrieve project ${PROJECT_OWNER}/${PROJECT_NUMBER} and session(s)... done`);
@@ -109,6 +108,32 @@ async function main({ preserve, except, apply, seed }) {
 
   const rooms = project.rooms;
   const slots = project.slots;
+
+  seed = seed ?? makeseed();
+
+  // Save initial grid algorithm settings as CLI params
+  const cli = {};
+  if (preserve === 'all') {
+    cli.preserve = 'all';
+  }
+  else if (preserve.length === 0) {
+    cli.preserve = 'none';
+  }
+  else {
+    cli.preserve = preserve.join(',');
+  }
+  if (!except) {
+    cli.except = 'none';
+  }
+  else if (except.length > 0) {
+    cli.except = except.join(',');
+  }
+  else {
+    cli.except = 'none';
+  }
+  cli.seed = seed;
+  cli.apply = apply;
+  cli.cmd = `node tools/suggest-grid.mjs ${cli.preserve} ${cli.except} ${cli.seed}`;
 
   if (preserve === 'all') {
     preserve = sessions.filter(s => s.slot || s.room).map(s => s.number);
@@ -532,11 +557,25 @@ async function main({ preserve, except, apply, seed }) {
   // If any sessions have not been assigned to a room, warn us.
   const unscheduled = sessions.filter(s => !s.slot || !s.room);
   if (unscheduled.length) {
-    logIndent(2, '<h2>Unscheduled sessions</h2>\n');
+    logIndent(2, '<h2>Unscheduled sessions</h2>');
     logIndent(2, '<p>' + unscheduled.map(s => '#' + s.number).join(', ') + '</p>');
   }
+
+  logIndent(2, '<h2>Generation parameters</h2>');
+  logIndent(2, `<ul>
+      <li>preserve: ${cli.preserve}</li>
+      <li>except: ${cli.except}</li>
+      <li>seed: ${cli.seed}</li>
+      <li>apply: ${cli.apply}</li>
+    </ul>
+    <p>Command-line command:</p>
+    <pre><code>${cli.cmd}</code></pre>`);
   logIndent(1, '</body>');
   logIndent(0, '</html>');
+
+  console.warn();
+  console.warn('To re-generate the grid, run:');
+  console.warn(cli.cmd);
 
   if (apply) {
     console.warn();
