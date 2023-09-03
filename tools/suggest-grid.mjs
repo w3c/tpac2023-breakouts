@@ -116,7 +116,7 @@ async function main({ preserve, except, apply, seed }) {
   if (preserve === 'all') {
     cli.preserve = 'all';
   }
-  else if (preserve.length === 0) {
+  else if (!preserve || preserve.length === 0) {
     cli.preserve = 'none';
   }
   else {
