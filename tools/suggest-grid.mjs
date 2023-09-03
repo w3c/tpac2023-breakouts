@@ -272,9 +272,10 @@ async function main({ preserve, except, apply, seed }) {
         }
 
         // There must be no conflicting sessions at the same time.
-        if (session.description.conflicts && meetConflicts.includes('session')) {
+        if (meetConflicts.includes('session')) {
           const sessionConflict = potentialConflicts.find(s =>
-            session.description.conflicts.includes(s.number));
+            session.description.conflicts?.includes(s.number) ||
+            s.description.conflicts?.includes(session.number));
           if (sessionConflict) {
             return false;
           }
