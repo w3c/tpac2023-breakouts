@@ -413,109 +413,128 @@ async function main({ preserve, except, apply, seed }) {
     }
   }
 
-    //    console.warn(sessions);
+  function logIndent(tab, str) {
+    let spaces = '';
+    while (tab > 0) {
+      spaces += '  ';
+      tab -= 1;
+    }
+    console.log(spaces + str);
+  }
+
   console.warn();
   console.warn('Grid - by room in HTML');
-    console.log('<html>\n<head>\n<meta charset="utf-8">\n<title>TPAC schedule</title>\n<style>\n.conflict-error { color: red; background-color: yellow; }\n.capacity-error { background-color: yellow;}\n.track-error { background-color: orange;}\n</style>\n</head>\n<body>');
-  console.log('<table border=1>');
-    // Print the top row of room names
-  console.log('<tr>\n<th></th>');
+  logIndent(0, `<html>
+  <head>
+    <meta charset="utf-8">
+    <title>TPAC schedule</title>
+    <style>
+      .conflict-error { color: red; background-color: yellow; }
+      .capacity-error { background-color: yellow; }
+      .track-error { background-color: orange; }
+    </style>
+  </head>
+  <body>
+    <table border=1>
+      <tr>
+        <th></th>`);
   for (const room of rooms) {
-     console.log('<th>' + room.name + '</th>');     
-     }
-  console.log('</tr>');
-    // Build individual rows
-  let tablerows = [], tablerow = [];  
+    logIndent(4, '<th>' + room.name + '</th>');
+  }
+  logIndent(3, '</tr>');
+  // Build individual rows
+  const tablerows = [];
   for (const slot of slots) {
-     let tablerow = [slot.name];
-     for (const room of rooms) {
-          let session = sessions.filter(s => s.slot === slot.name && s.room === room.name).pop();
-	  tablerow.push( session ? session : "" )
-	  }
-     tablerows.push(tablerow);
+    const tablerow = [slot.name];
+    for (const room of rooms) {
+      const session = sessions.filter(s => s.slot === slot.name && s.room === room.name).pop();
+      tablerow.push(session);
+    }
+    tablerows.push(tablerow);
   }
   // Format rows (after header row)
   for (const row of tablerows) {
-      // Format the row header (the time slot)
-      console.log('<tr>');
-      console.log('<th>')
-      console.log(row[0]);
+    // Format the row header (the time slot)
+    logIndent(3, '<tr>');
+    logIndent(4, '<th>');
+    logIndent(5, row[0]);
 
-      // Warn of any conflicting chairs in this slot (in first column)
-      // let allchairnames = row.filter((s,i) => i > 0).filter((s) => typeof(s) === 'object').map((s) => s.chairs).flat(1).map(c => c.name);
-      // let duplicates = allchairnames.filter((e, i, a) => a.indexOf(e) !== i);
-      // if (duplicates.length) {
-      // console.log("<p>Chair conflicts: " + duplicates.join(", ") + "</p>");
-      // }
+    // Warn of any conflicting chairs in this slot (in first column)
+    // let allchairnames = row.filter((s,i) => i > 0).filter((s) => typeof(s) === 'object').map((s) => s.chairs).flat(1).map(c => c.name);
+    // let duplicates = allchairnames.filter((e, i, a) => a.indexOf(e) !== i);
+    // if (duplicates.length) {
+    //   logIndent(5, '<p>Chair conflicts: '' + duplicates.join(', '') + '</p>');
+    // }
 
-      // Warn if two sessions from the same track are scheduled in this slot
-      let alltracks = row.filter((s,i) => i > 0 && typeof(s) === 'object').map(s => s.tracks).flat(1);
-      let trackdups = alltracks.filter((e, i, a) => a.indexOf(e) !== i);
-      if (trackdups.length) {
-         console.log('<p class="track-error">Same track: ' + trackdups.join(", ") + "</p>");
-       }
-      console.log('</th>')
-      // Format rest of row
-      for (let i = 1; i<row.length; i++) {
-          let session = row[i];
-	  if (!session) { 
-	      console.log('<td></td>');
-	  } else {
-	      // Warn if session capacity estimate exceeds room capacity
-	      let sloterrors = [];
-	      if (session.description.capacity > rooms[i-1].capacity) {
-		  sloterrors.push('capacity-error');
-	      }
-	      if (trackdups.length && trackdups.some(r => session.tracks.includes(r))) {
-		  sloterrors.push('track-error');
-	      }
-	      if (sloterrors.length) {
-     	          console.log('<td class="' + sloterrors.join(' ') + '">');
-	      } else { 	  
-    	          console.log('<td>');
+    // Warn if two sessions from the same track are scheduled in this slot
+    const alltracks = row.filter((s, i) => i > 0 && !!s).map(s => s.tracks).flat(1);
+    const trackdups = alltracks.filter((e, i, a) => a.indexOf(e) !== i);
+    if (trackdups.length) {
+      logIndent(5, '<p class="track-error">Same track: ' + trackdups.join(', ') + '</p>');
+    }
+    logIndent(4, '</th>');
+    // Format rest of row
+    for (let i = 1; i<row.length; i++) {
+      const session = row[i];
+      if (!session) {
+        logIndent(4, '<td></td>');
+      } else {
+        // Warn if session capacity estimate exceeds room capacity
+        const sloterrors = [];
+        if (session.description.capacity > rooms[i-1].capacity) {
+          sloterrors.push('capacity-error');
+        }
+        if (trackdups.length && trackdups.some(r => session.tracks.includes(r))) {
+          sloterrors.push('track-error');
+        }
+        if (sloterrors.length) {
+          logIndent(4, '<td class="' + sloterrors.join(' ') + '">');
+        } else {
+          logIndent(4, '<td>');
+        }
+        const url= 'https://github.com/' + session.repository + '/issues/' + session.number;
+        // Format session number (with link to GitHub) and name
+        logIndent(5, `<a href="${url}">#${session.number}</a>: ${session.title}`);
+
+        // Format chairs
+        logIndent(5, '<p>');
+        logIndent(6, '<i>' + session.chairs.map(x => x.name).join(',<br/>') + '</i>');
+        logIndent(5, '</p>');
+
+        // List session conflicts to avoid and highlight where there is a conflict.
+        if (Array.isArray(session.description.conflicts)) {
+          const confs = [];
+          for (const conflict of session.description.conflicts) {
+            for (const v of row) {
+              if (!!v && v.number === conflict) {
+                confs.push(conflict);
               }
-	      let url= 'https://github.com/' + session.repository + '/issues/' + session.number;
-	      // Format session number (with link to GitHub) and name
-      	      console.log('<a href=\"' + url + '\">#' + session.number + '</a>: ' + session.title);
-	      
-	      // Format chairs
-	      console.log("<p>");
-	      console.log("<i>" + session.chairs.map(x => x.name).join(',<br/>') + "</i>");
-      	      console.log("</p>");
-	      
-	      // List session conflicts to avoid and highlight where there is a conflict.
-	      if (Array.isArray(session.description.conflicts)) {
-		  let confs = [];
-		  for (const conflict of session.description.conflicts) {
-	              for (const v of row) {
-			  if (v.number === conflict) {
-			      confs.push(conflict);
-			  }
-		      }
-		  }
-		  if (confs.length) {
-		      console.log("<p><b>Conflicts with</b>: " + confs.map(s => '<span class="conflict-error">' + s + '</span>').join(', ') + "</p>");
-		  }
-		  // This version prints all conflict info if we want that
-                  // console.log("<p><b>Conflicts</b>: " + session.description.conflicts.map(s => confs.includes(s) ? '<span class="conflict-error">' + s + '</span>' : s).join(', ') + "</p>");
-	      }
-	      if (sloterrors.includes('capacity-error')) {
-              console.log('<p><b>Capacity</b>: ' + session.description.capacity + '</p>');
-	      }
-              console.log('</td>');
-	  }
-      }	 
-      console.log('</tr>');     
-  }	
-  console.log('</table>');
-    // If any sessions have not been assigned to a room, warn us.
-  let unscheduled = sessions.filter(s => !s.slot && !s.room);
+            }
+          }
+          if (confs.length) {
+            logIndent(5, '<p><b>Conflicts with</b>: ' + confs.map(s => '<span class="conflict-error">' + s + '</span>').join(', ') + '</p>');
+          }
+          // This version prints all conflict info if we want that
+          // logIndent(5, '<p><b>Conflicts</b>: ' + session.description.conflicts.map(s => confs.includes(s) ? '<span class="conflict-error">' + s + '</span>' : s).join(', ') + '</p>');
+        }
+        if (sloterrors.includes('capacity-error')) {
+          logIndent(5, '<p><b>Capacity</b>: ' + session.description.capacity + '</p>');
+        }
+        logIndent(4, '</td>');
+      }
+    }
+    logIndent(3, '</tr>');
+  }
+  logIndent(2, '</table>');
+
+  // If any sessions have not been assigned to a room, warn us.
+  const unscheduled = sessions.filter(s => !s.slot || !s.room);
   if (unscheduled.length) {
-     console.log('<h2>Unscheduled sessions</h2>\n');
-     console.log('<p>' + unscheduled.map(s => '#' + s.number).join(', ') + '</p>');
-     }	
-  console.log('</body>\n</html>\n');
-    
+    logIndent(2, '<h2>Unscheduled sessions</h2>\n');
+    logIndent(2, '<p>' + unscheduled.map(s => '#' + s.number).join(', ') + '</p>');
+  }
+  logIndent(1, '</body>');
+  logIndent(0, '</html>');
 
   if (apply) {
     console.warn();
