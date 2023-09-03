@@ -561,9 +561,12 @@ async function main({ preserve, except, apply, seed }) {
     logIndent(2, '<p>' + unscheduled.map(s => '#' + s.number).join(', ') + '</p>');
   }
 
+  const preserveInPractice = (preserve !== 'all' && preserve.length > 0) ?
+    ' (in practice: ' + preserve.sort((n1, n2) => n1 - n2).join(',') + ')' :
+    '';
   logIndent(2, '<h2>Generation parameters</h2>');
   logIndent(2, `<ul>
-      <li>preserve: ${cli.preserve}</li>
+      <li>preserve: ${cli.preserve}${preserveInPractice}</li>
       <li>except: ${cli.except}</li>
       <li>seed: ${cli.seed}</li>
       <li>apply: ${cli.apply}</li>
