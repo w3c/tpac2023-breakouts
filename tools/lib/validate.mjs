@@ -211,7 +211,7 @@ ${projectErrors.map(error => '- ' + error).join('\n')}`);
         session: sessionNumber,
         severity: 'warning',
         type: 'track',
-        messages: trackWarnings
+        messages: tracksWarnings
       });
     }
   }
