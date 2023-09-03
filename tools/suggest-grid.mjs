@@ -253,7 +253,8 @@ async function main({ preserve, except, apply, seed }) {
       }
 
       function nonConflictingSlot(slot) {
-        const potentialConflicts = sessions.filter(s => s.slot === slot.name);
+        const potentialConflicts = sessions.filter(s =>
+          s !== session && s.slot === slot.name);
         // There must be no session in the same track at that time
         const trackConflict = potentialConflicts.find(s =>
           s.tracks.find(track => session.tracks.includes(track)));
