@@ -133,7 +133,7 @@ async function main({ preserve, except, apply, seed }) {
   }
   cli.seed = seed;
   cli.apply = apply;
-  cli.cmd = `node tools/suggest-grid.mjs ${cli.preserve} ${cli.except} ${cli.seed}`;
+  cli.cmd = `node tools/suggest-grid.mjs ${cli.preserve} ${cli.except} ${apply} ${cli.seed}`;
 
   if (preserve === 'all') {
     preserve = sessions.filter(s => s.slot || s.room).map(s => s.number);
