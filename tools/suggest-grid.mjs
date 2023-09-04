@@ -102,7 +102,7 @@ async function main({ preserve, except, apply, seed }) {
   // sessions to too small rooms
   for (const session of sessions) {
     if (session.description.capacity === 0) {
-      session.description.capacity = 30;
+      session.description.capacity = 24;
     }
   }
 
