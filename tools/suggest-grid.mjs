@@ -636,6 +636,20 @@ async function main({ preserve, except, apply, seed }) {
     </ul>
     <p>Command-line command:</p>
     <pre><code>${cli.cmd}</code></pre>`);
+
+  // Generate JSON representing this allocation of sessions to rooms and slots to
+  // initialize the schedule
+  logIndent(2, '<h2>Raw Schedule</h2>');
+  logIndent(2, '<pre>');
+  console.log(sessions.map(s => (
+	{
+	    number: s.number,
+	    room: s.room,
+	    slot: s.slot
+	}
+  )));
+  logIndent(2, '</pre>');
+    
   logIndent(1, '</body>');
   logIndent(0, '</html>');
 
