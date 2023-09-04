@@ -459,6 +459,17 @@ async function main({ preserve, except, apply, seed }) {
       .conflict-error { color: red; background-color: yellow; }
       .capacity-error { background-color: yellow; }
       .track-error { background-color: orange; }
+      .track {
+        background-color: #0E8A16;
+        color: white;
+        border: 1px transparent;
+        border-radius: 1em;
+        margin-top: 0.2em;
+        margin-bottom: 0.2em;
+        padding: 3px 10px;
+        font-size: smaller;
+        white-space: nowrap;
+      }
     </style>
   </head>
   <body>
@@ -495,7 +506,7 @@ async function main({ preserve, except, apply, seed }) {
 
     // Warn if two sessions from the same track are scheduled in this slot
     const alltracks = row.filter((s, i) => i > 0 && !!s).map(s => s.tracks).flat(1);
-    const trackdups = alltracks.filter((e, i, a) => a.indexOf(e) !== i);
+    const trackdups = [...new Set(alltracks.filter((e, i, a) => a.indexOf(e) !== i))];
     if (trackdups.length) {
       logIndent(5, '<p class="track-error">Same track: ' + trackdups.join(', ') + '</p>');
     }
@@ -527,6 +538,13 @@ async function main({ preserve, except, apply, seed }) {
         logIndent(5, '<p>');
         logIndent(6, '<i>' + session.chairs.map(x => x.name).join(',<br/>') + '</i>');
         logIndent(5, '</p>');
+
+        // Add tracks if needed
+        if (session.tracks?.length > 0) {
+          for (const track of session.tracks) {
+            logIndent(5, `<p class="track">${track}</p>`);
+          }
+        }
 
         // List session conflicts to avoid and highlight where there is a conflict.
         if (Array.isArray(session.description.conflicts)) {
