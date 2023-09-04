@@ -70,7 +70,7 @@ async function main(validation) {
         // Need to preserve previous results that touched on other aspects
         const previousResults = session.validation[severity.toLowerCase()]
           .split(',')
-          .map(value = value.trim());
+          .map(value => value.trim());
         for (const result of previousResults) {
           if (!schedulingErrors.includes(`${severity.toLowerCase()}: ${result}`)) {
             results.push(result);
