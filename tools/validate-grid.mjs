@@ -83,6 +83,38 @@ async function main(validation) {
     await saveSessionValidationResult(session, project);
     console.log(`Save validation results for session ${session.number}... done`);
   }
+
+  if (validation !== 'everything') {
+    const resetSessions = project.sessions.filter(session =>
+      !sessions.find(s => s.number === session.number));
+    for (const session of resetSessions) {
+      let updated = false;
+      for (const severity of ['Error', 'Warning', 'Check']) {
+        if (!session.validation[severity.toLowerCase()]) {
+          continue;
+        }
+        let results = [];
+        const previousResults = session.validation[severity.toLowerCase()]
+          .split(',')
+          .map(value => value.trim());
+        for (const result of previousResults) {
+          if (!schedulingErrors.includes(`${severity.toLowerCase()}: ${result}`)) {
+            results.push(result);
+          }
+        }
+        if (results.length !== previousResults.length) {
+          results = results.sort();
+          session.validation[severity.toLowerCase()] = results.join(', ');
+          updated = true;
+        }
+      }
+      if (updated) {
+        console.log(`Save validation results for session ${session.number}...`);
+        await saveSessionValidationResult(session, project);
+        console.log(`Save validation results for session ${session.number}... done`);
+      }
+    }
+  }
 }
 
 
