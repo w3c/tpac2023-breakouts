@@ -176,7 +176,7 @@ async function fillCalendarEntry({ page, session, project, status, zoom }) {
   // Note statuses are different when calendar entry has already been flagged as
   // "tentative" or "confirmed" ("draft" no longer exists in particular).
   status = status ?? 'draft';
-  await page.$eval(`input[name="event[status]"][value=${status}]`, el => el.checked = true);
+  await page.$eval(`input[name="event[status]"][value=${status}]`, el => el.click());
   await fillTextInput('textarea#event_description', session.description.description);
 
   const room = project.rooms.find(room => room.name === session.room);
