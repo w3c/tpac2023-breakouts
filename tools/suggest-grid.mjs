@@ -256,7 +256,10 @@ async function main({ preserve, except, apply, seed }) {
     for (const room of possibleRooms) {
       const possibleSlots = [];
       if (session.slot) {
-        possibleSlots.push(slots.find(slot => slot.name === session.slot));
+        const slot = slots.find(slot => slot.name === session.slot);
+        if (!room.sessions.find(s => s !== session && s.slot === session.slot)) {
+          possibleSlots.push(slot);
+        }
       }
       else {
         possibleSlots.push(...slots
