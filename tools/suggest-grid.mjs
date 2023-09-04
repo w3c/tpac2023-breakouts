@@ -228,6 +228,13 @@ async function main({ preserve, except, apply, seed }) {
   }) {
     const byCapacity = (r1, r2) => r1.capacity - r2.capacity;
     const byCapacityDesc = (r1, r2) => r2.capacity - r1.capacity;
+
+    // List possible rooms:
+    // - If we explicitly set a room already, that's the only possibility.
+    // - Otherwise, if the default track room constraint is set, that's
+    // the only possible choice.
+    // - Otherwise, all rooms that have enough capacity are possible,
+    // or all rooms if capacity constraint has been relaxed already.
     const possibleRooms = [];
     if (session.room) {
       // Keep room already assigned
@@ -254,6 +261,15 @@ async function main({ preserve, except, apply, seed }) {
     }
 
     for (const room of possibleRooms) {
+      // List possible slots in the current room:
+      // - If we explicitly set a slot already, that's the only possibility,
+      // provided the slot is available in that room!
+      // - Otherwise, all the slots that are still available in the room are
+      // possible.
+      // If we're dealing with a real track, we'll consider possible slots in
+      // order. If we're dealing with a session that is not in a track,
+      // possible slots are ordered so that less used ones get considered first
+      // (to avoid gaps).
       const possibleSlots = [];
       if (session.slot) {
         const slot = slots.find(slot => slot.name === session.slot);
@@ -280,6 +296,14 @@ async function main({ preserve, except, apply, seed }) {
         }
       }
 
+      // A non-conflicting slot in the list of possible slots is one that does
+      // not lead to a situation where:
+      // - Two sessions in the same track are scheduled at the same time.
+      // - Two sessions chaired by the same person happen at the same time.
+      // - Conflicting sessions are scheduled at the same time.
+      // - Session is scheduled in a slot that does not meet the duration
+      // requirement.
+      // ... Unless these constraints have been relaxed!
       function nonConflictingSlot(slot) {
         const potentialConflicts = sessions.filter(s =>
           s !== session && s.slot === slot.name);
@@ -321,6 +345,9 @@ async function main({ preserve, except, apply, seed }) {
         return true;
       }
 
+      // Search for a suitable slot for the current room in the list. If one is
+      // found, we're done, otherwise move on to next possible room... or
+      // surrender for this set of constraints.
       const slot = possibleSlots.find(nonConflictingSlot);
       if (slot) {
         if (!session.room) {
@@ -339,9 +366,14 @@ async function main({ preserve, except, apply, seed }) {
   }
 
   // Proceed on a track-by-track basis, and look at sessions in each track in
-  // turn. Choose slot, then choose room. If no room is available, try with a
-  // different slot until we find a pair of slot and room that works.
+  // turn.
   for (const track of tracks) {
+    // Choose a default track room that has enough capacity and enough
+    // available slots to fit all session tracks, if possible, starting with
+    // rooms that have a maximum number of available slots. Relax capacity and
+    // slot number constraints if there is no ideal candidate room. In
+    // practice, unless we're running short on rooms, this should select a room
+    // that is still unused for the track.
     const trackRoom = chooseTrackRoom(track);
     if (track) {
       console.warn(`Schedule sessions in track "${track}" favoring room "${trackRoom.name}"...`);
@@ -349,8 +381,16 @@ async function main({ preserve, except, apply, seed }) {
     else {
       console.warn(`Schedule sessions in main track...`);
     }
+
+    // Process each session in the track in turn, unless it has already been
+    // processed (this may happen when the session belongs to two tracks).
     let session = selectNextSession(track);
     while (session) {
+      // Attempt to assign a room and slot that meets all constraints.
+      // If that fails, relax constraints one by one and start over.
+      // Scheduling may fail if there's no way to avoid a conflict and if
+      // that conflict cannot be relaxed (e.g., same person cannot chair two
+      // sessions at the same time).
       const constraints = {
         trackRoom,
         strictDuration: true,
