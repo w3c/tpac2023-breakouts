@@ -352,10 +352,12 @@ async function main({ preserve, except, apply, seed }) {
       if (slot) {
         if (!session.room) {
           session.room = room.name;
+          session.updated = true;
           room.sessions.push(session);
         }
         if (!session.slot) {
           session.slot = slot.name;
+          session.updated = true;
           slot.sessions.push(session);
         }
         return true;
