@@ -543,11 +543,11 @@ async function main({ preserve, except, apply, seed }) {
     logIndent(5, row[0]);
 
     // Warn of any conflicting chairs in this slot (in first column)
-    // let allchairnames = row.filter((s,i) => i > 0).filter((s) => typeof(s) === 'object').map((s) => s.chairs).flat(1).map(c => c.name);
-    // let duplicates = allchairnames.filter((e, i, a) => a.indexOf(e) !== i);
-    // if (duplicates.length) {
-    //   logIndent(5, '<p>Chair conflicts: '' + duplicates.join(', '') + '</p>');
-    // }
+     let allchairnames = row.filter((s,i) => i > 0).filter((s) => typeof(s) === 'object').map((s) => s.chairs).flat(1).map(c => c.name);
+     let duplicates = allchairnames.filter((e, i, a) => a.indexOf(e) !== i);
+     if (duplicates.length) {
+       logIndent(5, '<p class="conflict-error">Chair conflicts: ' + duplicates.join(', ') + '</p>');
+     }
 
     // Warn if two sessions from the same track are scheduled in this slot
     const alltracks = row.filter((s, i) => i > 0 && !!s).map(s => s.tracks).flat(1);
