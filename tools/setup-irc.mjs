@@ -47,11 +47,12 @@ async function main({ number, slot, onlyCommands } = {}) {
   }
   project.chairsToW3CID = CHAIR_W3CID;
   let sessions = project.sessions.filter(s => s.slot &&
-    ((!number && !slot) || s.number === number || s.slot.startsWith(slot)));
+    (!number || s.number === number) &&
+    (!slot || s.slot.startsWith(slot)));
   sessions.sort((s1, s2) => s1.number - s2.number);
   if (number) {
     if (sessions.length === 0) {
-      throw new Error(`Session ${number} not found in project ${PROJECT_OWNER}/${PROJECT_NUMBER}`);
+      throw new Error(`Session ${number} not found in project ${PROJECT_OWNER}/${PROJECT_NUMBER} or not assigned to requested slot`);
     }
     else if (!sessions[0].slot) {
       throw new Error(`Session ${number} not assigned to a slot in project ${PROJECT_OWNER}/${PROJECT_NUMBER}`);
@@ -82,6 +83,24 @@ async function main({ number, slot, onlyCommands } = {}) {
   }
   console.log(`Retrieve project ${PROJECT_OWNER}/${PROJECT_NUMBER} and session(s)... done`);
 
+  console.log('Compute IRC channels...');
+  const channels = {};
+  for (const session of sessions) {
+    const channel = getChannel(session);
+    if (!channels[channel]) {
+      channels[channel] = [];
+    }
+    channels[channel].push(session);
+    channels[channel].sort((s1, s2) => {
+      const slot1 = project.slots.findIndex(slot => slot.name === s1.slot);
+      const slot2 = project.slots.findIndex(slot => slot.name === s2.slot);
+      return slot1 - slot2;
+    });
+  }
+  sessions = Object.values(channels).map(sessions => sessions[0]);
+  console.log(`- found ${Object.keys(channels).length} different IRC channels`);
+  console.log('Compute IRC channels... done');
+
   console.log();
   console.log('Connect to W3C IRC server...');
   const bot = onlyCommands ?
@@ -100,7 +119,7 @@ async function main({ number, slot, onlyCommands } = {}) {
 
   function inviteBot(session, name) {
     const channel = getChannel(session);
-    console.log(`/invite ${name}`);
+    console.log(`/invite ${name} ${channel}`);
     if (!onlyCommands) {
       bot.send('INVITE', name, channel);
     }
@@ -111,14 +130,14 @@ async function main({ number, slot, onlyCommands } = {}) {
     const room = project.rooms.find(r => r.name === session.room);
     const roomLabel = room ? `- ${room.label} ` : '';
     const topic = `TPAC breakout: ${session.title} ${roomLabel}- ${session.slot}`;
-    console.log(`/topic ${topic}`);
+    console.log(`/topic ${channel} ${topic}`);
     if (!onlyCommands) {
       bot.send('TOPIC', channel, topic);
     }
   }
 
   function say(channel, msg) {
-    console.log(msg);
+    console.log(`/msg ${channel} ${msg}`);
     if (!onlyCommands) {
       bot.say(channel, msg);
     }
@@ -137,6 +156,7 @@ async function main({ number, slot, onlyCommands } = {}) {
       inviteBot(session, 'RRSAgent');
     }
     else if (nick === 'RRSAgent') {
+      say(channel, `RRSAgent, do not leave`);
       say(channel, `RRSAgent, make logs ${session.description.attendance === 'restricted' ? 'member' : 'public'}`);
       say(channel, `Meeting: ${session.title}`);
       say(channel, `Chair: ${session.chairs.map(c => c.name).join(', ')}`);
@@ -144,6 +164,12 @@ async function main({ number, slot, onlyCommands } = {}) {
           !todoStrings.includes(session.description.materials.agenda)) {
         say(channel, `Agenda: ${session.description.materials.agenda}`);
       }
+      say(channel, 'clear agenda');
+      say(channel, 'agenda+ Pick a scribe');
+      say(channel, 'agenda+ Reminders: code of conduct, health policies, recorded session policy');
+      say(channel, 'agenda+ Goal of this session');
+      say(channel, 'agenda+ Discussion');
+      say(channel, 'agenda+ Next steps / where discussion continues');
       if (bot) {
         bot.part(channel);
       }
