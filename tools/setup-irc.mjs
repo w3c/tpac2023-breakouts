@@ -164,6 +164,13 @@ async function main({ number, slot, onlyCommands } = {}) {
           !todoStrings.includes(session.description.materials.agenda)) {
         say(channel, `Agenda: ${session.description.materials.agenda}`);
       }
+      else {
+        say(channel, `Agenda: https://github.com/${session.repository}/issues/${session.number}`);
+      }
+      if (session.description.materials.slides &&
+          !todoStrings.includes(session.description.materials.slides)) {
+        say(channel, `Slideset: ${session.description.materials.slides}`);
+      }
       say(channel, 'clear agenda');
       say(channel, 'agenda+ Pick a scribe');
       say(channel, 'agenda+ Reminders: code of conduct, health policies, recorded session policy');
