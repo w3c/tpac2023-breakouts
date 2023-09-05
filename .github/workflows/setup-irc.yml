@@ -12,6 +12,14 @@ on:
         required: true
         default: 'all'
         type: string
+      dismiss:
+        description: 'Setup channel, or dismiss bots'
+        required: true
+        default: 'setup'
+        type: choice
+        options:
+          - setup
+          - dismiss
 
 jobs:
   update-calendar:
@@ -32,7 +40,7 @@ jobs:
         run: npm ci
 
       - name: Run the setup script
-        run: node tools/setup-irc.mjs ${{ inputs.slot }} ${{ inputs.sessionNumber }}
+        run: node tools/setup-irc.mjs ${{ inputs.slot }} ${{ inputs.sessionNumber }} full ${{ inputs.dismiss }}
         env:
           # URL of the annual TPAC XXXX breakout project.
           # The PROJECT_OWNER and PROJECT_NUMBER variables must be defined on

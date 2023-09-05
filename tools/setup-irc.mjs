@@ -3,7 +3,7 @@
  *
  * To run the tool:
  *
- *  node tools/setup-irc.mjs [slot or "all"] [sessionNumber or "all"] [commands]
+ *  node tools/setup-irc.mjs [slot or "all"] [sessionNumber or "all"] [commands] [dismiss]
  *
  * where [slot or "all"] is the slot start time of sessions to initialize
  * (e.g. "9:30"), or "all" to initialize sessions across slots. The job is
@@ -14,10 +14,10 @@
  * [sessionNumber or "all"] is the session issue number or "all" to initialize
  * IRC channels for all valid sessions in the slot.
  * 
- * set [commands] to "commands" to only output the IRC commands to run without
+ * Set [commands] to "commands" to only output the IRC commands to run without
  * actually running them.
- *
- * The tool should run once per slot, shortly before the sessions start.
+ * 
+ * Set [dismiss] to "dismiss" to make bots draft minutes and leave the channel.
  */
 
 import { getEnvKey } from './lib/envkeys.mjs';
@@ -35,7 +35,7 @@ function getChannel(session) {
   return session.description.shortname;
 }
 
-async function main({ number, slot, onlyCommands } = {}) {
+async function main({ number, slot, onlyCommands, dismissBots } = {}) {
   const PROJECT_OWNER = await getEnvKey('PROJECT_OWNER');
   const PROJECT_NUMBER = await getEnvKey('PROJECT_NUMBER');
   const CHAIR_W3CID = await getEnvKey('CHAIR_W3CID', {}, true);
@@ -151,9 +151,19 @@ async function main({ number, slot, onlyCommands } = {}) {
     const room = project.rooms.find(r => r.name === session.room);
     const roomLabel = room ? `- ${room.label} ` : '';
     if (nick === botName) {
-      setTopic(session);
-      inviteBot(session, 'Zakim');
-      inviteBot(session, 'RRSAgent');
+      if (dismissBots) {
+        say(channel, `RRSAgent, draft minutes`);
+        say(channel, `RRSAgent, bye`);
+        say(channel, `Zakim, bye`);
+        if (bot) {
+          bot.part(channel);
+        }
+      }
+      else {
+        setTopic(session);
+        inviteBot(session, 'Zakim');
+        inviteBot(session, 'RRSAgent');
+      }
     }
     else if (nick === 'RRSAgent') {
       say(channel, `RRSAgent, do not leave`);
@@ -193,7 +203,9 @@ async function main({ number, slot, onlyCommands } = {}) {
       console.log('-----');
       joinChannel(session);
       sendChannelBotCommands(getChannel(session), botName);
-      sendChannelBotCommands(getChannel(session), 'RRSAgent');
+      if (!dismissBots) {
+        sendChannelBotCommands(getChannel(session), 'RRSAgent');
+      }
       console.log('-----');
     }
     return;
@@ -263,12 +275,13 @@ if (!process.argv[3] || !process.argv[3].match(/^(\d+|all)$/)) {
 
 // Command only?
 const onlyCommands = process.argv[4] === 'commands';
+const dismissBots = process.argv[5] === 'dismiss';
 
 
 const slot = process.argv[2] === 'all' ? undefined : process.argv[2];
 const number = process.argv[3] === 'all' ? undefined : parseInt(process.argv[3], 10);
 
-main({ slot, number, onlyCommands })
+main({ slot, number, onlyCommands, dismissBots })
   .then(_ => process.exit(0))
   .catch(err => {
     console.log(`Something went wrong: ${err.message}`);
