@@ -636,6 +636,10 @@ async function main({ preserve, except, apply, seed }) {
     </ul>
     <p>Command-line command:</p>
     <pre><code>${cli.cmd}</code></pre>`);
+  logIndent(2, '<h2>Data for Saving/Restoring Schedule</h2>');
+  logIndent(2, '<pre id="data">');
+  console.log(JSON.stringify(sessions.map(s=> ({ number: s.number, room: s.room, slot: s.slot}))));
+  logIndent(2, '</pre>');  
   logIndent(1, '</body>');
   logIndent(0, '</html>');
 
