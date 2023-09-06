@@ -5,8 +5,9 @@ import { fetchProject, assignSessionsToSlotAndRoom } from './lib/project.mjs'
 function readconfig(filename) {
    if (filename) {
       let content = fs.readFileSync(filename).toString();
-      let regexp = /<pre id="data">[^<]+<\/pre>/s;
-      let data = content.match(regexp)[0].match(/\[\{.*\}\]/)[0];
+      // Don't want room names with </pre> in them!
+      let regexp = /<pre id="data">(.*)<\/pre>/s;
+      let data = content.match(regexp)[1];
       return(Array.from(JSON.parse(data)));
       }
    }
@@ -27,33 +28,40 @@ async function main({ filename, apply }) {
 
   const rooms = project.rooms;
   const slots = project.slots;
-  const configs = readconfig({ filename });
+  const configs = readconfig(filename);
     
   for (const config of configs) {
-      if (!sessions.map(s => s.number === config.number) {
-     	  console.warn("Unknown session " + config.number);
+      if (!sessions.map(s => s.number === config.number)) {
+     	  throw new Error("Unknown session " + config.number);
       }
-      if (!slots.map(s => s.name === config.slot) {
-  	  console.warn("Unknown slot " + config.slot + " in " + config.number);
+      if (!slots.map(s => s.name === config.slot)) {
+  	  throw new Error("Unknown slot " + config.slot + " in " + config.number);
       }
-      if (!rooms.map(s => s.name === config.room) {
-  	  console.warn("Unknown room " + config.room + " in " + config.number);
+      if (!rooms.map(s => s.name === config.room)) {
+  	  throw new Error("Unknown room " + config.room + " in " + config.number);
       }
       let session = sessions.find(s => s.number === config.number);
-      session.room = config.room;
-      session.slot = config.slot;
+      if (session.room !== config.room || session.slot !== config.slot) {
+         session.room = config.room;
+         session.slot = config.slot;
+	 session.updated = true;
+      }
   }
-    console.log("Done assigning sessions to rooms and slots.");
+  console.log("Done assigning sessions to rooms and slots.");
 
-//    if (apply) {
-//      console.warn();
-//      for (const session of sessions) {
-//        console.warn(`- updating #${session.number}...`);
-/        await assignSessionsToSlotAndRoom(session, project);
-//        console.warn(`- updating #${session.number}... done`);
-//      }
-//    }
-	
+  if (apply) {
+     console.warn();
+     let updated = [];	
+     for (const session of sessions) {
+         if (session.updated) {
+            console.warn(`- updating #${session.number}...`);
+            await assignSessionsToSlotAndRoom(session, project);
+            console.warn(`- updating #${session.number}... done`);
+	    updated.push(session.number);	     
+	 }
+      }
+      console.warn( updated.length ? "Updated sessions: " + updated.join(', ') : "No sessions modified.");
+    }
 }
 
 
