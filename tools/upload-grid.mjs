@@ -48,9 +48,6 @@ async function main({ filename, apply }) {
       session.room = config.room;
       session.slot = config.slot;
   }
-    for (const s of sessions) {
-        console.log(s.number + ', ' + s.slot + ', ' + s.room);
-    }
     console.log("Done assigning sessions to rooms and slots.");
 
 //    if (apply) {
