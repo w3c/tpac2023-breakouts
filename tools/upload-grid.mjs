@@ -1,10 +1,8 @@
 import fs from 'fs';
 import { getEnvKey } from './lib/envkeys.mjs';
 import { fetchProject, assignSessionsToSlotAndRoom } from './lib/project.mjs'
-import { validateSession } from './lib/validate.mjs';
-import seedrandom from 'seedrandom';
 
-function readconfig({ filename }) {
+function readconfig(filename) {
    if (filename) {
       let content = fs.readFileSync(filename).toString();
       let regexp = /<pre id="data">[^<]+<\/pre>/s;
@@ -32,17 +30,14 @@ async function main({ filename, apply }) {
   const configs = readconfig({ filename });
     
   for (const config of configs) {
-      if (!sessions.map(s => s.number).includes(config.number)) {
+      if (!sessions.map(s => s.number === config.number) {
      	  console.warn("Unknown session " + config.number);
-//	  continue;
       }
-      if (!slots.map(s => s.name).includes(config.slot)) {
+      if (!slots.map(s => s.name === config.slot) {
   	  console.warn("Unknown slot " + config.slot + " in " + config.number);
-//   	  continue;	    
       }
-      if (!rooms.map(s => s.name).includes(config.room)) {
+      if (!rooms.map(s => s.name === config.room) {
   	  console.warn("Unknown room " + config.room + " in " + config.number);
-//   	  continue;	    	    
       }
       let session = sessions.find(s => s.number === config.number);
       session.room = config.room;
