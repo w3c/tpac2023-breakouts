@@ -21,6 +21,10 @@ function formatAgenda(session) {
 **Track(s):**
 ${tracks.join('\n')}` :
     '';
+  const attendanceStr = session.description.attendance === 'restricted' ? `
+**Attendance:**
+This session is restricted to TPAC registrants.` :
+    '';
 
   return `**Chairs:**
 ${session.chairs.map(chair => chair.name ?? '@' + chair.login).join(', ')}
@@ -30,6 +34,7 @@ ${session.description.description}
 
 **Goal(s):**
 ${session.description.goal}
+${attendanceStr}
 
 **Materials:**
 ${materials.join('\n')}
@@ -183,7 +188,8 @@ async function fillCalendarEntry({ page, session, project, status, zoom }) {
   const roomLocation = (room?.label ?? '') + (room?.location ? ' - ' + room.location : '');
   await fillTextInput('input#event_location', roomLocation ?? '');
 
-  await clickOnElement('input#event_visibility_' + (session.description.attendance === 'restricted' ? '1' : '0'));
+  // All events are visible to everyone
+  await clickOnElement('input#event_visibility_0');
 
   await page.evaluate(`window.tpac_breakouts_date = "${project.metadata.date}";`);
   await page.$eval('input#event_start_date', el => el.value = window.tpac_breakouts_date);
@@ -210,8 +216,9 @@ async function fillCalendarEntry({ page, session, project, status, zoom }) {
     );
   }
 
-  // Show joining information to "Holders of a W3C account"
-  await clickOnElement('input#event_joinVisibility_1');
+  // Show joining information to "Holders of a W3C account", unless session is restricted
+  // to TPAC registrants
+  await clickOnElement('input#event_joinVisibility_' + (session.description.attendance === 'restricted' ? '2' : '1'));
 
   if (getZoomLink(zoom)) {
     await fillTextInput('input#event_joinLink', getZoomLink(zoom));
