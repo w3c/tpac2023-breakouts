@@ -45,7 +45,17 @@
 import { getEnvKey } from './lib/envkeys.mjs';
 import { fetchProject, assignSessionsToSlotAndRoom } from './lib/project.mjs'
 import { validateSession } from './lib/validate.mjs';
+import { validateGrid } from './lib/validate.mjs';
 import seedrandom from 'seedrandom';
+
+const schedulingErrors = [
+  'error: chair conflict',
+  'error: scheduling',
+  'warning: capacity',
+  'warning: conflict',
+  'warning: duration',
+  'warning: track'
+];
 
 /**
  * Helper function to shuffle an array
@@ -455,6 +465,20 @@ async function main({ preserve, except, apply, seed }) {
       console.warn(`- [WARNING] #${session.number} could not be scheduled${tracks}`);
     }
   }
+
+  console.warn();
+  console.warn(`Validate grid...`);
+  const errors = (await validateGrid(project))
+    .filter(error => schedulingErrors.includes(`${error.severity}: ${error.type}`));
+  if (errors.length) {
+    for (const error of errors) {
+      console.warn(`- [${error.severity}: ${error.type}] #${error.session}: ${error.messages.join(', ')}`);
+    }
+  }
+  else {
+    console.warn(`- looks good!`);
+  }
+  console.warn(`Validate grid... done`);
 
   function logIndent(tab, str) {
     let spaces = '';
