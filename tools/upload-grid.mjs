@@ -3,14 +3,14 @@ import { getEnvKey } from './lib/envkeys.mjs';
 import { fetchProject, assignSessionsToSlotAndRoom } from './lib/project.mjs'
 
 function readconfig(filename) {
-   if (filename) {
-      let content = fs.readFileSync(filename).toString();
-      // Don't want room names with </pre> in them!
-      let regexp = /<pre id="data">(.*)<\/pre>/s;
-      let data = content.match(regexp)[1];
-      return(Array.from(JSON.parse(data)));
-      }
-   }
+  if (filename) {
+    let content = fs.readFileSync(filename).toString();
+    // Don't want room names with </pre> in them!
+    let regexp = /<pre id="data">(.*)<\/pre>/s;
+    let data = content.match(regexp)[1];
+    return(JSON.parse(data));
+  }
+}
 
 async function main({ filename, apply }) {
   const PROJECT_OWNER = await getEnvKey('PROJECT_OWNER');
@@ -26,42 +26,48 @@ async function main({ filename, apply }) {
   sessions = sessions.filter(s => !!s);
   console.warn(`Retrieve project ${PROJECT_OWNER}/${PROJECT_NUMBER} and session(s)... done`);
 
+  console.warn(`Extract grid from HTML page...`);
   const rooms = project.rooms;
   const slots = project.slots;
   const configs = readconfig(filename);
-    
+  console.warn(`Extract grid from HTML page... done`);
+
+  console.warn(`Assign sessions to rooms and slots...`);
+  const updated = [];
   for (const config of configs) {
-      if (!sessions.map(s => s.number === config.number)) {
-     	  throw new Error("Unknown session " + config.number);
-      }
-      if (!slots.map(s => s.name === config.slot)) {
-  	  throw new Error("Unknown slot " + config.slot + " in " + config.number);
-      }
-      if (!rooms.map(s => s.name === config.room)) {
-  	  throw new Error("Unknown room " + config.room + " in " + config.number);
-      }
-      let session = sessions.find(s => s.number === config.number);
-      if (session.room !== config.room || session.slot !== config.slot) {
-         session.room = config.room;
-         session.slot = config.slot;
-	 session.updated = true;
-      }
+    if (!sessions.map(s => s.number === config.number)) {
+      throw new Error('Unknown session ' + config.number);
+    }
+    if (!slots.map(s => s.name === config.slot)) {
+      throw new Error('Unknown slot ' + config.slot + ' in ' + config.number);
+    }
+    if (!rooms.map(s => s.name === config.room)) {
+      throw new Error('Unknown room ' + config.room + ' in ' + config.number);
+    }
+    let session = sessions.find(s => s.number === config.number);
+    if (session.room !== config.room || session.slot !== config.slot) {
+      session.room = config.room;
+      session.slot = config.slot;
+      updated.push(session);
+    }
   }
-  console.log("Done assigning sessions to rooms and slots.");
 
   if (apply) {
-     console.warn();
-     let updated = [];	
-     for (const session of sessions) {
-         if (session.updated) {
-            console.warn(`- updating #${session.number}...`);
-            await assignSessionsToSlotAndRoom(session, project);
-            console.warn(`- updating #${session.number}... done`);
-	    updated.push(session.number);	     
-	 }
-      }
-      console.warn( updated.length ? "Updated sessions: " + updated.join(', ') : "No sessions modified.");
+    for (const session of updated) {
+      console.warn(`- updating #${session.number}...`);
+      await assignSessionsToSlotAndRoom(session, project);
+      console.warn(`- updating #${session.number}... done`);
     }
+    console.warn(updated.length ?
+      `- ${updated.length} sessions updated` :
+      '- no session to update');
+  }
+  else {
+    console.warn(updated.length ?
+      `- ${updated.length} sessions would be updated: ${updated.map(s => s.number).join(', ')}` :
+      '- no session would be updated');
+  }
+  console.warn(`Assign sessions to rooms and slots... done`);
 }
 
 
@@ -69,7 +75,7 @@ async function main({ filename, apply }) {
 // contains the raw session data
 let filename
 if (!process.argv[2]) {
-    console.warn("Missing first param: HTML file with grid and raw data");
+    console.warn('Missing first param: HTML file with grid and raw data');
     } else {
     filename  = process.argv[2];
    }
