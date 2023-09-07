@@ -15,7 +15,14 @@
  * assigned slots and rooms are to be discarded. Or "none" to say "no exception,
  * preserve info in all sessions".
  * 
- * [apply] is "apply" if you want to apply the suggested grid on GitHub.
+ * [apply] is "apply" if you want to apply the suggested grid on GitHub, or
+ * a link to a changes file if you want to test changes to the suggested grid
+ * before it gets validated and saved as an HTML page. The changes file must be
+ * a file where each row starts with a session number, followed by a space,
+ * followed by either a slot start time or a slot number or a room name. If slot
+ * was specified, it may be followed by another space, followed by a room name.
+ * (Room name cannot be specified before the slot).
+ *
  * 
  * [seed] is the seed string to shuffle the array of sessions.
  *
@@ -42,6 +49,7 @@
  * it cannot schedule due to a confict that it cannot resolve.
  */
 
+import { readFile } from 'fs/promises';
 import { getEnvKey } from './lib/envkeys.mjs';
 import { fetchProject, assignSessionsToSlotAndRoom } from './lib/project.mjs'
 import { validateSession } from './lib/validate.mjs';
@@ -79,7 +87,7 @@ function makeseed() {
     .join('');
 }
 
-async function main({ preserve, except, apply, seed }) {
+async function main({ preserve, except, changesFile, apply, seed }) {
   const PROJECT_OWNER = await getEnvKey('PROJECT_OWNER');
   const PROJECT_NUMBER = await getEnvKey('PROJECT_NUMBER');
   const CHAIR_W3CID = await getEnvKey('CHAIR_W3CID', {}, true);
@@ -121,6 +129,53 @@ async function main({ preserve, except, apply, seed }) {
   const slots = project.slots;
 
   seed = seed ?? makeseed();
+
+  // Load changes to apply locally if so requested
+  let changes = [];
+  if (changesFile) {
+    try {
+      changes = (await readFile(changesFile, 'utf8'))
+        .split('\n')
+        .filter(line => !line.startsWith(';'))
+        .map(line => {
+          const change = {
+            number: null,
+            slot: null,
+            room: null
+          };
+
+          // Line needs to start with session number
+          let match = line.match(/^(\d+)(.*)$/);
+          change.number = parseInt(match[1], 10);
+
+          // Rest may either be a slot (possibly followed by a room) or a room
+          const rest = match[2].trim();
+          match = rest.match(/^(?:(\d{1,2}:\d{1,2})|(\d+))(.*)$/);
+          if (match) {
+            // A slot was specified
+            change.slot = match[1] ?
+              slots.find(s => s.name.startsWith(match[1])).name :
+              slots[parseInt(match[2], 10)-1].name;
+            change.room = match[3].trim() ?
+              rooms.find(r => r.name.startsWith(match[3].trim())).name :
+              null;
+          }
+          else {
+            // No slot was specified, there should be a room
+            change.room = rest.trim() ?
+              rooms.find(r => r.name.startsWith(rest.trim())).name :
+              null;
+          }
+          return change;
+        })
+        .filter(change => change.slot || change.room)
+      console.warn(changes);
+    }
+    catch (err) {
+      // Not a changes file!
+      throw err;
+    }
+  }
 
   // Save initial grid algorithm settings as CLI params
   const cli = {};
@@ -467,6 +522,25 @@ async function main({ preserve, except, apply, seed }) {
     }
   }
 
+  if (changes.length > 0) {
+    console.warn();
+    console.warn(`Apply local changes...`);
+    for (const change of changes) {
+      const session = sessions.find(s => s.number === change.number);
+      if (change.room && change.room !== session.room) {
+        console.warn(`- move #${change.number} to room ${change.room}`);
+        session.room = change.room;
+        session.updated = true;
+      }
+      if (change.slot && change.slot !== session.slot) {
+        console.warn(`- move #${change.number} to slot ${change.slot}`);
+        session.slot = change.slot;
+        session.updated = true;
+      }
+    }
+    console.warn(`Apply local changes... done`);
+  }
+
   console.warn();
   console.warn(`Validate grid...`);
   const errors = (await validateGrid(project))
@@ -597,7 +671,7 @@ async function main({ preserve, except, apply, seed }) {
             }
           }
           if (confs.length) {
-            logIndent(5, '<p><b>Conflicts with</b>: ' + confs.map(s => '<span class="conflict-error">' + s + '</span>').join(', ') + '</p>');
+            logIndent(5, '<p><b>Conflicts with</b>: ' + confs.map(s => '<span class="conflict-error">#' + s + '</span>').join(', ') + '</p>');
           }
           // This version prints all conflict info if we want that
           // logIndent(5, '<p><b>Conflicts</b>: ' + session.description.conflicts.map(s => confs.includes(s) ? '<span class="conflict-error">' + s + '</span>' : s).join(', ') + '</p>');
@@ -685,9 +759,10 @@ if (process.argv[3]) {
 }
 
 const apply = process.argv[4] === 'apply';
+const changesFile = apply ? undefined : (process.argv[4] ?? undefined);
 const seed = process.argv[5] ?? undefined;
 
-main({ preserve, except, apply, seed })
+main({ preserve, except, changesFile, apply, seed })
   .catch(err => {
     console.warn(`Something went wrong: ${err.message}`);
     throw err;
