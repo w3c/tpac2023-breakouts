@@ -430,7 +430,7 @@ async function main({ preserve, except, apply, seed }) {
           constraints.meetConflicts = [];
         }
         else {
-          console.warn(`- [WARNING] could not find a room and slot for #${session.number}`);
+          console.warn(`- could not find a room and slot for #${session.number}`);
           break;
         }
       }
@@ -449,39 +449,10 @@ async function main({ preserve, except, apply, seed }) {
 
   sessions.sort((s1, s2) => s1.number - s2.number);
 
-  console.warn();
-  console.warn('Grid - by slot');
-  console.warn('--------------');
-  for (const slot of slots) {
-    console.warn(slot.name);
-    for (const session of slot.sessions) {
-      const tracks = session.tracks.length ? ' - ' + session.tracks.join(', ') : '';
-      console.warn(`- ${session.room}: #${session.number} ${session.title}${tracks}`);
-    }
-  }
-
-  console.warn();
-  console.warn('Grid - by room');
-  console.warn('--------------');
-  for (const room of rooms) {
-    console.warn(room.name);
-    for (const session of room.sessions) {
-      const tracks = session.tracks.length ? ' - ' + session.tracks.join(', ') : '';
-      console.warn(`- ${session.slot}: #${session.number} ${session.title}${tracks}`);
-    }
-  }
-
-  console.warn();
-  console.warn('Grid - by session');
-  console.warn('-----------------');
   for (const session of sessions) {
-    const tracks = session.tracks.length ? ' - ' + session.tracks.join(', ') : '';
-    if (session.slot && session.room) {
-      const room = rooms.find(room => room.name === session.room);
-      console.warn(`#${session.number} > ${session.slot} ${room.label} (${room.capacity})${tracks}`);
-    }
-    else {
-      console.warn(`#${session.number} > [WARNING] could not be scheduled${tracks}`);
+    if (!session.slot || !session.room) {
+      const tracks = session.tracks.length ? ' - ' + session.tracks.join(', ') : '';
+      console.warn(`- [WARNING] #${session.number} could not be scheduled${tracks}`);
     }
   }
 
@@ -495,7 +466,6 @@ async function main({ preserve, except, apply, seed }) {
   }
 
   console.warn();
-  console.warn('Grid - by room in HTML');
   logIndent(0, `<html>
   <head>
     <meta charset="utf-8">
@@ -636,6 +606,10 @@ async function main({ preserve, except, apply, seed }) {
     </ul>
     <p>Command-line command:</p>
     <pre><code>${cli.cmd}</code></pre>`);
+  logIndent(2, '<h2>Data for Saving/Restoring Schedule</h2>');
+  logIndent(2, '<pre id="data">');
+  console.log(JSON.stringify(sessions.map(s=> ({ number: s.number, room: s.room, slot: s.slot})), null, 2));
+  logIndent(2, '</pre>');  
   logIndent(1, '</body>');
   logIndent(0, '</html>');
 
