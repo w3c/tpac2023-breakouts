@@ -216,6 +216,22 @@ ${projectErrors.map(error => '- ' + error).join('\n')}`);
     }
   }
 
+  // No two sessions can use the same IRC channel during the same slot
+  if (session.description.shortname) {
+    const ircConflicts = project.sessions.filter(s =>
+      s.number !== session.number &&
+      s.slot === session.slot &&
+      s.description.shortname === session.description.shortname);
+    if (ircConflicts.length > 0) {
+      errors.push({
+        session: sessionNumber,
+        severity: 'error',
+        type: 'irc',
+        messages: ircConflicts.map(s => `Same IRC channel "${s.description.shortname}" as session #${s.number} ${s.title}`)
+      });
+    }
+  }
+
   // Check presence of comments
   if (session.description.comments) {
     errors.push({

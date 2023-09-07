@@ -20,6 +20,7 @@ import { sendGraphQLRequest } from './lib/graphql.mjs';
 const schedulingErrors = [
   'error: chair conflict',
   'error: scheduling',
+  'error: irc',
   'warning: capacity',
   'warning: conflict',
   'warning: duration',

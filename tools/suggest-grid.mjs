@@ -51,6 +51,7 @@ import seedrandom from 'seedrandom';
 const schedulingErrors = [
   'error: chair conflict',
   'error: scheduling',
+  'error: irc',
   'warning: capacity',
   'warning: conflict',
   'warning: duration',
@@ -680,7 +681,7 @@ if (process.argv[3]) {
   }
   except = process.argv[3] === 'none' ?
     undefined :
-    process.argv[3].map(n => parseInt(n, 10));
+    process.argv[3].split(',').map(n => parseInt(n, 10));
 }
 
 const apply = process.argv[4] === 'apply';
