@@ -136,7 +136,8 @@ async function main({ preserve, except, changesFile, apply, seed }) {
     try {
       changes = (await readFile(changesFile, 'utf8'))
         .split('\n')
-        .filter(line => !line.startsWith(';'))
+        .map(line => line.trim())
+        .filter(line => line.length && !line.startsWith(';'))
         .map(line => {
           const change = {
             number: null,
