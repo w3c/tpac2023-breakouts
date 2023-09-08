@@ -218,10 +218,17 @@ ${projectErrors.map(error => '- ' + error).join('\n')}`);
 
   // No two sessions can use the same IRC channel during the same slot
   if (session.description.shortname) {
-    const ircConflicts = project.sessions.filter(s =>
-      s.number !== session.number &&
-      s.slot === session.slot &&
-      s.description.shortname === session.description.shortname);
+    const ircConflicts = project.sessions
+      .filter(s => s.number !== session.number && s.slot === session.slot)
+      .filter(s => {
+        try {
+          const desc = parseSessionBody(s.body);
+          return desc.shortname === session.shortname;
+        }
+        catch {
+          return false;
+        }
+      });
     if (ircConflicts.length > 0) {
       errors.push({
         session: sessionNumber,
