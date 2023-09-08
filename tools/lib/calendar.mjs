@@ -2,6 +2,24 @@ import { validateSession } from './validate.mjs';
 import { updateSessionDescription } from './session.mjs';
 import { todoStrings } from './todostrings.mjs';
 
+
+async function fetchChairName({ chair, browser, login, password }) {
+  console.log(`- fetch chair name for ${chair.login}`);
+  const page = await browser.newPage();
+  const url = `https://www.w3.org/users/${chair.w3cId}/`
+  try {
+    await page.goto(url);
+    await authenticate(page, login, password, url);
+    chair.name = await page.evaluate(() => {
+      const el = document.querySelector('main article h1');
+      return el.textContent.trim();
+    });
+  }
+  finally {
+    await page.close();
+  }
+}
+
 /**
  * Helper function to format calendar entry description from the session's info
  */
@@ -274,6 +292,12 @@ export async function convertSessionToCalendarEntry(
   if (!session.slot) {
     // TODO: if calendar URL is set, delete calendar entry
     return;
+  }
+
+  for (const chair of session.chairs) {
+    if (chair.name === chair.login && chair.w3cId) {
+      await fetchChairName({ chair, browser, login, password });
+    }
   }
 
   const calendarUrl = session.description.materials.calendar ?? undefined;
