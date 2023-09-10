@@ -227,8 +227,9 @@ async function fillCalendarEntry({ page, session, project, status, zoom }) {
   const chairs = session.chairs.filter(chair => chair.w3cId && chair.w3cId !== -1);
   if (chairs.length > 0) {
     await page.evaluate(`window.tpac_breakouts_chairs = ${JSON.stringify(chairs, null, 2)};`);
-    await page.$eval('select#event_individuals', el => el.innerHTML =
+    await page.$eval('select#event_individuals', el => el.innerHTML +=
       window.tpac_breakouts_chairs
+        .filter(chair => !el.querySelector(`option[selected][value="${chair.w3cId}"]`))
         .map(chair => `<option value="${chair.w3cId}" selected="selected">${chair.name}</option>`)
         .join('\n')
     );
