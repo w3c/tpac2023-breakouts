@@ -24,25 +24,31 @@ export async function fetchSessionChairs(session, chairs2W3CID) {
   }
   const chairs = [];
   if (session.author) {
-    const w3cAccount = await fetchW3CAccount(session.author.databaseId);
-    const chair = {
-      databaseId: session.author.databaseId,
-      avatarUrl: session.author.avatarUrl,
-      login: session.author.login
-    };
-    if (w3cAccount) {
-      chair.w3cId = w3cAccount.w3cId;
-      chair.name = w3cAccount.name;
-      chair.email = w3cAccount.email;
+    if (!session.description.chairs ||
+        !session.description.chairs.find(c => c.name?.toLowerCase() === 'author--')) {
+      const w3cAccount = await fetchW3CAccount(session.author.databaseId);
+      const chair = {
+        databaseId: session.author.databaseId,
+        avatarUrl: session.author.avatarUrl,
+        login: session.author.login
+      };
+      if (w3cAccount) {
+        chair.w3cId = w3cAccount.w3cId;
+        chair.name = w3cAccount.name;
+        chair.email = w3cAccount.email;
+      }
+      else if (lcChairs2W3CID[session.author.login.toLowerCase()]) {
+        chair.w3cId = lcChairs2W3CID[session.author.login.toLowerCase()];
+        chair.name = session.author.login;
+      }
+      chairs.push(chair);
     }
-    else if (lcChairs2W3CID[session.author.login.toLowerCase()]) {
-      chair.w3cId = lcChairs2W3CID[session.author.login.toLowerCase()];
-      chair.name = session.author.login;
-    }
-    chairs.push(chair);
   }
   if (session.description.chairs) {
     for (const chairDesc of session.description.chairs) {
+      if (chairDesc.name?.toLowerCase() === 'author--') {
+        continue;
+      }
       let chair = Object.assign({}, chairDesc);
       if (chair.login) {
         const githubAccount = await sendGraphQLRequest(`query {
@@ -87,6 +93,9 @@ export async function fetchSessionChairs(session, chairs2W3CID) {
  * in other words if it contains objects that don't have a `login` property.
  */
 export function validateSessionChairs(chairs) {
+  if (chairs.length === 0) {
+    return ['Issue author is not a session chair, no other chair specified'];
+  }
   return chairs
     .map(chair => {
       if (chair.login) {

@@ -140,17 +140,16 @@ ${projectErrors.map(error => '- ' + error).join('\n')}`);
     const chairConflictErrors = project.sessions
       .filter(s => s !== session && s.slot === session.slot)
       .filter(s => {
-        if (s.author.login === session.author.login) {
-          return true;
-        }
-        if (session.chairs.find(c => c.login === s.author.login)) {
-          return true;
-        }
         try {
           const sdesc = parseSessionBody(s.body);
+          const sAuthorExcluded = sdesc.chairs
+            .find(c => c.name?.toLowerCase() === 'author--');
+          if (!sAuthorExcluded && session.chairs.find(c => c.login === s.author.login)) {
+            return true;
+          }
           const inboth = sdesc.chairs.find(chair => session.chairs.find(c =>
-            (c.login && c.login === chair.login) ||
-            (c.name && c.name === chair.name)));
+            (c.login && c.login.toLowerCase() === chair.login?.toLowerCase()) ||
+            (c.name && c.name.toLowerCase() === chair.name?.toLowerCase())));
           return !!inboth;
         }
         catch {
