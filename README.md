@@ -2,7 +2,7 @@
 This repo is for the W3C community to propose and organize breakout sessions for [TPAC 2023](https://www.w3.org/2023/09/TPAC/). Sessions will take place on Wednesday, 13 September; detailed schedule will be based on the proposals received and published on the [TPAC schedule](https://www.w3.org/2023/09/TPAC/schedule.html#wednesday) a couple of days before that.
 
 * [List of proposed sessions](https://github.com/w3c/tpac2023-breakouts/issues). We welcome expressions of support (through emojis), questions, and other comments.
-* [Propose a new session](https://github.com/w3c/tpac2023-breakouts/issues/new?assignees=&labels=session&projects=&template=session.yml) (for those who have registered for TPAC or plan to).
+<- * [Propose a new session](https://github.com/w3c/tpac2023-breakouts/issues/new?assignees=&labels=session&projects=&template=session.yml) (for those who have registered for TPAC or plan to). ->
 * [Calendar of breakout sessions](https://www.w3.org/calendar/tpac2023/breakout-sessions/).
 * [Grid of breakout sessions](https://www.w3.org/2023/09/TPAC/breakouts.html#grid).
 * [Time slot schedule](https://github.com/w3c/tpac2023-breakouts/wiki/Breakout-time-slots).
