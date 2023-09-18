@@ -253,22 +253,6 @@ ${projectErrors.map(error => '- ' + error).join('\n')}`);
       todoStrings.includes(session.description.materials[name].toUpperCase());
   }
 
-  // If breakout session takes place in less than 2 days (or past),
-  // time to add a link to an agenda
-  const twoDaysInMs = 48 * 60 * 60 * 1000;
-  const inLessThanTwoDays = (
-      (new Date(project.metadata.date)).getTime() -
-      (new Date()).getTime()
-    ) < twoDaysInMs;
-  if (scheduled && isMaterialMissing('agenda') && inLessThanTwoDays) {
-    errors.push({
-      session: sessionNumber,
-      severity: 'warning',
-      type: 'agenda',
-      messages: ['Session needs a link to an agenda']
-    });
-  }
-
   // If breakout session took place more than 2 days ago,
   // time to add a link to the minutes
   const atLeastTwoDaysOld = (
