@@ -255,6 +255,7 @@ ${projectErrors.map(error => '- ' + error).join('\n')}`);
 
   // If breakout session took place more than 2 days ago,
   // time to add a link to the minutes
+  const twoDaysInMs = 48 * 60 * 60 * 1000;
   const atLeastTwoDaysOld = (
       (new Date()).getTime() -
       (new Date(project.metadata.date)).getTime()

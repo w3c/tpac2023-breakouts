@@ -178,16 +178,16 @@ export async function initSectionHandlers() {
           const materials = {};
           parseList(value, { spaceSeparator: false })
             .map(line =>
-              line.match(/^([^:]+):\s*(.*)$/i) ??
-              line.match(/^\[(.+)\]\((.*)\)$/i))
+              line.match(/^([^:]+):\s*(https?:\/\/.*)$/i) ??
+              line.match(/^\[(.+)\]\((https?:\/\/.*)\)$/i))
             .forEach(match => materials[match[1].toLowerCase()] = match[2]);
           return materials;
         };
         handler.validate = value => {
           const matches = parseList(value, { spaceSeparator: false })
             .map(line =>
-              line.match(/^([^:]+):\s*(.*)$/i) ||
-              line.match(/^\[(.+)\]\((.*)\)$/i));
+              line.match(/^([^:]+):\s*(https?:\/\/.*)$/i) ||
+              line.match(/^\[(.+)\]\((https?:\/\/.*)\)$/i));
           return matches.every(match => {
             if (!match) {
               return false;
