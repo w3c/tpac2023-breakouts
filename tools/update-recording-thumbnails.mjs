@@ -31,6 +31,7 @@ async function listRecordings(accountId, authToken, recordingPrefix) {
   );
   const json = await response.json();
   const recordings = json.result
+    .filter(v => v.meta.name.startsWith(recordingPrefix))
     .map(v => Object.assign({
       sessionId: v.meta.name.match(/-(\d+)\.mp4$/)[1],
       name: v.meta.name,
