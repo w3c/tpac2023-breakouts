@@ -272,12 +272,12 @@ ${projectErrors.map(error => '- ' + error).join('\n')}`);
   // Minutes should ideally be stored on www.w3.org
   if (!isMaterialMissing('minutes')) {
     const minutesUrl = session.description.materials.minutes;
-    if (!minutesUrl.match(/\/www\.w3\.org\//)) {
+    if (!minutesUrl.match(/\/(www|lists)\.w3\.org\//)) {
       errors.push({
         session: sessionNumber,
         severity: 'warning',
         type: 'minutes origin',
-        messages: ['Minutes not stored on www.w3.org']
+        messages: ['Minutes not stored on w3.org']
       });
     }
   }
