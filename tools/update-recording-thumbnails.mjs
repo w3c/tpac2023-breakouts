@@ -18,7 +18,7 @@
 
 import path from 'path';
 import fs from 'fs/promises';
-import { convert } from './webvtt2html.mjs';
+import { getEnvKey } from './lib/envkeys.mjs';
 
 async function listRecordings(accountId, authToken, recordingPrefix) {
   const response = await fetch(

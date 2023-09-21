@@ -169,7 +169,7 @@ async function waitUntilReady(recording, accountId, authToken) {
       return true;
     }
     else {
-      await sleep(5000);
+      await sleep(10000);
       return isReady();
     }
   }
@@ -192,7 +192,7 @@ async function clipRecording(recording, start, end, accountId, authToken) {
   // Step 4: Wait for new recording to be ready
   console.log('- wait until new recording is ready');
   const timeoutPromise = new Promise(resolve => {
-    setTimeout(resolve, 300000, 'timeout');
+    setTimeout(resolve, 1200000, 'timeout');
   });
   const readyPromise = waitUntilReady(recording, accountId, authToken);
   const result = await Promise.race([timeoutPromise, readyPromise]);
