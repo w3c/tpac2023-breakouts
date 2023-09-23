@@ -25,9 +25,10 @@ import { sendGraphQLRequest } from './graphql.mjs';
  *     ...
  *   ],
  *   "severityFieldIds": {
- *     "check": "xxxxxxx",
- *     "warning": "xxxxxxx",
- *     "error": "xxxxxxx"
+ *     "Check": "xxxxxxx",
+ *     "Warning": "xxxxxxx",
+ *     "Error": "xxxxxxx",
+ *     "Note": "xxxxxxx"
  *   },
  *   "sessions": [
  *     {
@@ -116,7 +117,7 @@ export async function fetchProject(login, id) {
 
   // Similar requests to get the ids of the custom fields used for validation
   const severityFieldIds = {};
-  for (const severity of ['Error', 'Warning', 'Check']) {
+  for (const severity of ['Error', 'Warning', 'Check', 'Note']) {
     const response = await sendGraphQLRequest(`query {
       ${type}(login: "${login}"){
         projectV2(number: ${id}) {
@@ -292,7 +293,8 @@ export async function fetchProject(login, id) {
           validation: {
             check: session.fieldValues.nodes.find(value => value.field?.name === 'Check')?.text,
             warning: session.fieldValues.nodes.find(value => value.field?.name === 'Warning')?.text,
-            error: session.fieldValues.nodes.find(value => value.field?.name === 'Error')?.text
+            error: session.fieldValues.nodes.find(value => value.field?.name === 'Error')?.text,
+            note: session.fieldValues.nodes.find(value => value.field?.name === 'Note')?.text
           }
         };
       }),

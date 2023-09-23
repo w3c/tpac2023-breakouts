@@ -139,6 +139,18 @@ async function main(sessionNumber, changesFile) {
       results.push('irc channel');
       results = results.sort();
     }
+    else if (severity === 'Warning' && session.validation.note) {
+      results = results.filter(warning => {
+        const keep =
+          !session.validation.note.includes(`-warning:${warning}`) &&
+          !session.validation.note.includes(`-warn:${warning}`) &&
+          !session.validation.note.includes(`-w:${warning}`);
+        if (!keep) {
+          console.log(`- drop warning:${warning} per note`);
+        }
+        return keep;
+      });
+    }
     session.validation[severity.toLowerCase()] = results.join(', ');
   }
   await saveSessionValidationResult(session, project);

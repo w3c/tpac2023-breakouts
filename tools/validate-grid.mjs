@@ -67,6 +67,18 @@ async function main(validation) {
         // Need to keep the 'irc channel' value until an admin removes it
         results.push('irc channel');
       }
+      else if (severity === 'Warning' && session.validation.note) {
+        results = results.filter(warning => {
+          const keep =
+            !session.validation.note.includes(`-warning:${warning}`) &&
+            !session.validation.note.includes(`-warn:${warning}`) &&
+            !session.validation.note.includes(`-w:${warning}`);
+          if (!keep) {
+            console.log(`- drop warning:${warning} per note`);
+          }
+          return keep;
+        });
+      }
       if (validation !== 'everything' && session.validation[severity.toLowerCase()]) {
         // Need to preserve previous results that touched on other aspects
         const previousResults = session.validation[severity.toLowerCase()]
