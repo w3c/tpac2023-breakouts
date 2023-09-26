@@ -36,21 +36,21 @@ async function main() {
     if (folder.includes('.')) {
       continue;
     }
-    let files = await fs.readdir(path.join(rootFolder, folder));
+    let files = await fs.readdir(path.join(RECORDING_FOLDER_RAW, folder));
     const prefix = `${RECORDING_PREFIX}-${folder.split('-')[0]}`;
 
     const recording = files.find(f => f.match(/_Recording_\d{3,4}x\d{3,4}\.mp4$/));
     if (recording) {
       await fs.copyFile(
-        path.join(rootFolder, folder, recording),
-        path.join(rootFolder, prefix + '.mp4'));
+        path.join(RECORDING_FOLDER_RAW, folder, recording),
+        path.join(RECORDING_FOLDER_RAW, prefix + '.mp4'));
     }
 
     const subtitles = files.find(f => f.match(/_Recording\.transcript\.vtt$/));
     if (subtitles) {
       await fs.copyFile(
-        path.join(rootFolder, folder, subtitles),
-        path.join(rootFolder, prefix + '.vtt'));
+        path.join(RECORDING_FOLDER_RAW, folder, subtitles),
+        path.join(RECORDING_FOLDER_RAW, prefix + '.vtt'));
     }
   }
 }
