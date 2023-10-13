@@ -3,21 +3,19 @@
  *
  * To run the tool:
  *
- *  node tools/setup-irc.mjs [slot or "all"] [sessionNumber or "all"] [commands] [dismiss]
+ *  node tools/setup-irc.mjs [sessionNumber or "all"] [commands] [dismiss]
  *
- * where [slot or "all"] is the slot start time of sessions to initialize
- * (e.g. "9:30"), or "all" to initialize sessions across slots. The job is
- * intended to be run shortly before each slot to init RRSAgent and Zakim. The
- * "all" choice is probably not a good idea unless you also specify a session
- * number: IRC bots leave channels after 2 hours of inactivity!
- * 
- * [sessionNumber or "all"] is the session issue number or "all" to initialize
- * IRC channels for all valid sessions in the slot.
+ * where [sessionNumber or "all"] is the session issue number or "all" to
+ * initialize IRC channels for all valid sessions.
  * 
  * Set [commands] to "commands" to only output the IRC commands to run without
  * actually running them.
  * 
  * Set [dismiss] to "dismiss" to make bots draft minutes and leave the channel.
+ *
+ * The tool runs IRC commands one after the other to avoid getting kicked out
+ * of the IRC server. It allows checks that IRC bots return the appropriate
+ * responses.
  */
 
 import { getEnvKey } from './lib/envkeys.mjs';
@@ -27,6 +25,7 @@ import { todoStrings } from './lib/todostrings.mjs';
 import irc from 'irc';
 
 const botName = 'tpac-breakout-bot';
+const timeout = 60 * 1000;
 
 /**
  * Helper function to generate a shortname from the session's title
@@ -35,7 +34,34 @@ function getChannel(session) {
   return session.description.shortname;
 }
 
-async function main({ number, slot, onlyCommands, dismissBots } = {}) {
+
+/**
+ * Helper function to make the code wait for a specific IRC command from the
+ * IRC server, typically to check that a command we sent was properly executed.
+ *
+ * Note the function will timeout after some time. The timeout is meant to
+ * avoid getting stuck in an infinite loop when a bot becomes unresponsive.
+ */
+const pendingIRCMessage = {
+  what: {},
+  promise: null,
+  resolve: null
+};
+async function waitForIRCMessage(what) {
+  pendingIRCMessage.what = what;
+  pendingIRCMessage.promise = new Promise((resolve, reject) => {
+    pendingIRCMessage.resolve = resolve;
+  });
+  const timeoutPromise = new Promise((resolve, reject) => {
+    setTimeout(reject, timeout, 'timeout');
+  });
+  return Promise.race([pendingIRCMessage.promise, timeoutPromise]);
+}
+
+/**
+ * Main function
+ */
+async function main({ number, onlyCommands, dismissBots } = {}) {
   const PROJECT_OWNER = await getEnvKey('PROJECT_OWNER');
   const PROJECT_NUMBER = await getEnvKey('PROJECT_NUMBER');
   const CHAIR_W3CID = await getEnvKey('CHAIR_W3CID', {}, true);
@@ -47,19 +73,15 @@ async function main({ number, slot, onlyCommands, dismissBots } = {}) {
   }
   project.chairsToW3CID = CHAIR_W3CID;
   let sessions = project.sessions.filter(s => s.slot &&
-    (!number || s.number === number) &&
-    (!slot || s.slot.startsWith(slot)));
+    (!number || s.number === number));
   sessions.sort((s1, s2) => s1.number - s2.number);
   if (number) {
     if (sessions.length === 0) {
-      throw new Error(`Session ${number} not found in project ${PROJECT_OWNER}/${PROJECT_NUMBER} or not assigned to requested slot`);
+      throw new Error(`Session ${number} not found in project ${PROJECT_OWNER}/${PROJECT_NUMBER}`);
     }
     else if (!sessions[0].slot) {
       throw new Error(`Session ${number} not assigned to a slot in project ${PROJECT_OWNER}/${PROJECT_NUMBER}`);
     }
-  }
-  else if (slot) {
-    console.log(`- found ${sessions.length} sessions assigned to slot ${slot}: ${sessions.map(s => s.number).join(', ')}`);
   }
   else {
     console.log(`- found ${sessions.length} sessions assigned to slots: ${sessions.map(s => s.number).join(', ')}`);
@@ -109,11 +131,106 @@ async function main({ number, slot, onlyCommands, dismissBots } = {}) {
       channels: []
     });
 
+  const connection = {
+    established: null,
+    resolve: null,
+    reject: null
+  };
+  connection.established = new Promise((resolve, reject) => {
+    connection.resolve = resolve;
+    connection.reject = reject;
+  });
+  if (bot) {
+    bot.addListener('registered', msg => {
+      console.log(`- registered message: ${msg.command}`);
+      connection.resolve();
+    });
+  }
+  else {
+    console.log(`- commands only, no connection needed`);
+    connection.resolve();
+  }
+  await connection.established;
+  console.log('Connect to W3C IRC server... done');
+
+  if (bot) {
+    // Only useful when debugging the code
+    /*bot.addListener('raw', msg => {
+      console.log(JSON.stringify({
+        nick: msg.nick,
+        command: msg.command,
+        commandType: msg.commandType,
+        raw: msg.rawCommand,
+        args: msg.args
+      }, null, 2));
+    });*/
+
+    // Listen to the JOIN messages that tell us when our bot or the bots we've
+    // invited have joined the IRC channel.
+    bot.addListener('join', (channel, nick, message) => {
+      if (pendingIRCMessage.what.command === 'join' &&
+          pendingIRCMessage.what.channel === channel &&
+          pendingIRCMessage.what.nick === nick) {
+        pendingIRCMessage.resolve();
+      }
+    });
+
+    // Listen to the MESSAGE messages that contain bot replies to our commands.
+    bot.addListener('message', (nick, channel, text, message) => {
+      if (pendingIRCMessage.what.command === 'message' &&
+          (pendingIRCMessage.what.channel === channel || channel === botName) &&
+          pendingIRCMessage.what.nick === nick &&
+          text.startsWith(pendingIRCMessage.what.message)) {
+        pendingIRCMessage.resolve();
+      }
+    });
+
+    // Listen to the TOPIC message that should tell us that we managed to set
+    // the topic as planned.
+    bot.addListener('topic', (channel, topic, nick, message) => {
+      if (pendingIRCMessage.what.command === 'topic' &&
+          pendingIRCMessage.what.channel === channel &&
+          pendingIRCMessage.what.nick === nick) {
+        pendingIRCMessage.resolve();
+      }
+    });
+
+    // Listen to PART messages to tell when our bot or other bots leave the
+    // channel.
+    bot.addListener('part', (channel, nick) => {
+      if (pendingIRCMessage.what.command === 'part' &&
+          pendingIRCMessage.what.channel === channel &&
+          pendingIRCMessage.what.nick === nick) {
+        pendingIRCMessage.resolve();
+      }
+    });
+
+    // Errors are returned when a bot gets invited to a channel where it
+    // already is, and when disconnecting from the server. Both cases are fine,
+    // let's trap them.
+    bot.addListener('error', err => {
+      if (err.command === 'err_useronchannel' &&
+          pendingIRCMessage.what.command === 'join' &&
+          pendingIRCMessage.what.channel === err.args[2] &&
+          pendingIRCMessage.what.nick === err.args[1]) {
+        pendingIRCMessage.resolve();
+      }
+      else if (err.command === 'ERROR' &&
+          err.args[0] === '"node-irc says goodbye"') {
+        console.log('- disconnected from IRC server');
+      }
+      else {
+        throw err;
+      }
+    });
+  }
+
   function joinChannel(session) {
     const channel = getChannel(session);
     console.log(`/join ${channel}`);
     if (!onlyCommands) {
       bot.join(channel);
+      return waitForIRCMessage({ command: 'join', channel, nick: botName });
     }
   }
 
@@ -122,6 +239,15 @@ async function main({ number, slot, onlyCommands, dismissBots } = {}) {
     console.log(`/invite ${name} ${channel}`);
     if (!onlyCommands) {
       bot.send('INVITE', name, channel);
+      return waitForIRCMessage({ command: 'join', channel, nick: name });
+    }
+  }
+
+  function leaveChannel(session) {
+    const channel = getChannel(session);
+    if (!onlyCommands) {
+      bot.part(channel);
+      return waitForIRCMessage({ command: 'part', channel, nick: botName });
     }
   }
 
@@ -133,157 +259,158 @@ async function main({ number, slot, onlyCommands, dismissBots } = {}) {
     console.log(`/topic ${channel} ${topic}`);
     if (!onlyCommands) {
       bot.send('TOPIC', channel, topic);
+      return waitForIRCMessage({ command: 'topic', channel, nick: botName });
     }
   }
 
+  async function setupRRSAgent(session) {
+    const channel = getChannel(session);
+    await say(channel, {
+      to: 'RRSAgent',
+      message: `do not leave`,
+      reply: `ok, ${botName}; I will stay here even if the channel goes idle`
+    });
+
+    await say(channel, {
+      to: 'RRSAgent',
+      message: `make logs ${session.description.attendance === 'restricted' ? 'member' : 'public'}`,
+      reply: `I have made the request, ${botName}`
+    });
+
+    await say(channel, `Meeting: ${session.title}`);
+    await say(channel, `Chair: ${session.chairs.map(c => c.name).join(', ')}`);
+    if (session.description.materials.agenda &&
+        !todoStrings.includes(session.description.materials.agenda)) {
+      await say(channel, `Agenda: ${session.description.materials.agenda}`);
+    }
+    else {
+      await say(channel, `Agenda: https://github.com/${session.repository}/issues/${session.number}`);
+    }
+    if (session.description.materials.slides &&
+        !todoStrings.includes(session.description.materials.slides)) {
+      await say(channel, `Slideset: ${session.description.materials.slides}`);
+    }
+  }
+
+  async function setupZakim(session) {
+    const channel = getChannel(session);
+    await say(channel, {
+      to: 'Zakim',
+      message: 'clear agenda',
+      reply: 'agenda cleared'
+    });
+    await say(channel, {
+      to: 'Zakim',
+      message: 'agenda+ Pick a scribe',
+      reply: 'agendum 1 added'
+    });
+    await say(channel, {
+      to: 'Zakim',
+      message: 'agenda+ Reminders: code of conduct, health policies, recorded session policy',
+      reply: 'agendum 2 added'
+    });
+    await say(channel, {
+      to: 'Zakim',
+      message: 'agenda+ Goal of this session',
+      reply: 'agendum 3 added'
+    });
+    await say(channel, {
+      to: 'Zakim',
+      message: 'agenda+ Discussion',
+      reply: 'agendum 4 added'
+    });
+    await say(channel, {
+      to: 'Zakim',
+      message: 'agenda+ Next steps / where discussion continues',
+      reply: 'agendum 5 added'
+    });
+  }
+
+  async function draftMinutes(session) {
+    const channel = getChannel(session);
+    await say(channel, `Zakim, bye`);
+    await say(channel, {
+      to: 'RRSAgent',
+      message: 'draft minutes',
+      reply: 'I have made the request to generate'
+    });
+    await say(channel, `RRSAgent, bye`);
+  }
+
+  // Helper function to send a message to a channel. The function waits for a
+  // reply if one is expected.
   function say(channel, msg) {
-    console.log(`/msg ${channel} ${msg}`);
+    const message = msg?.to ?
+      `${msg.to}, ${msg.message}` :
+      (msg?.message ? msg.message : msg);
+    console.log(`/msg ${channel} ${message}`);
     if (!onlyCommands) {
-      bot.say(channel, msg);
+      bot.say(channel, message);
+      if (msg?.reply) {
+        return waitForIRCMessage({
+          command: 'message', channel,
+          nick: msg.to, message: msg.reply
+        });
+      }
     }
   }
 
-  function sendChannelBotCommands(channel, nick) {
-    const session = sessions.find(s => channel === getChannel(s));
-    if (!session) {
-      return;
-    }
-    const room = project.rooms.find(r => r.name === session.room);
-    const roomLabel = room ? `- ${room.label} ` : '';
-    if (nick === botName) {
-      if (dismissBots) {
-        say(channel, `RRSAgent, draft minutes`);
-        say(channel, `RRSAgent, bye`);
-        say(channel, `Zakim, bye`);
-        if (bot) {
-          bot.part(channel);
-        }
-      }
-      else {
-        setTopic(session);
-        inviteBot(session, 'Zakim');
-        inviteBot(session, 'RRSAgent');
-      }
-    }
-    else if (nick === 'RRSAgent') {
-      say(channel, `RRSAgent, do not leave`);
-      say(channel, `RRSAgent, make logs ${session.description.attendance === 'restricted' ? 'member' : 'public'}`);
-      say(channel, `Meeting: ${session.title}`);
-      say(channel, `Chair: ${session.chairs.map(c => c.name).join(', ')}`);
-      if (session.description.materials.agenda &&
-          !todoStrings.includes(session.description.materials.agenda)) {
-        say(channel, `Agenda: ${session.description.materials.agenda}`);
-      }
-      else {
-        say(channel, `Agenda: https://github.com/${session.repository}/issues/${session.number}`);
-      }
-      if (session.description.materials.slides &&
-          !todoStrings.includes(session.description.materials.slides)) {
-        say(channel, `Slideset: ${session.description.materials.slides}`);
-      }
-      say(channel, 'clear agenda');
-      say(channel, 'agenda+ Pick a scribe');
-      say(channel, 'agenda+ Reminders: code of conduct, health policies, recorded session policy');
-      say(channel, 'agenda+ Goal of this session');
-      say(channel, 'agenda+ Discussion');
-      say(channel, 'agenda+ Next steps / where discussion continues');
-      if (bot) {
-        bot.part(channel);
-      }
-    }
-    else if (nick === 'Zakim') {
-      // No specific command to send when Zakim joins
-    }
-  }
-
-  if (onlyCommands) {
-    for (const session of sessions) {
-      console.log();
-      console.log(`session ${session.number}`);
-      console.log('-----');
-      joinChannel(session);
-      sendChannelBotCommands(getChannel(session), botName);
-      if (!dismissBots) {
-        sendChannelBotCommands(getChannel(session), 'RRSAgent');
-      }
-      console.log('-----');
-    }
-    return;
-  }
-
-  bot.addListener('registered', msg => {
-    console.log(`- Received message: ${msg.command}`);
-    console.log('Connect to W3C IRC server... done');
-    for (const session of sessions) {
-      console.log();
-      console.log(`session ${session.number}`);
-      console.log('-----');
-      joinChannel(session);
-    }
-  });
-
-  bot.addListener('raw', msg => {
-    //console.log(JSON.stringify(msg, null, 2));
-  });
-
-  bot.addListener('error', err => {
-    if (err.command === 'err_useronchannel') {
-      // We invited bots but they're already there, that's good!
-      const nick = err.args[1];
-      const channel = err.args[2];
-      sendChannelBotCommands(channel, nick);
-      return;
-    }
-    throw err;
-  });
-
-  bot.addListener('join', (channel, nick, message) => {
-    sendChannelBotCommands(channel, nick);
-  });
-
-  bot.addListener('part', (channel, nick) => {
-    if (nick !== botName) {
-      return;
-    }
-    const session = sessions.find(s => channel === getChannel(s));
-    if (!session) {
-      return;
-    }
-    session.done = true;
+  const errors = [];
+  for (const session of sessions) {
+    console.log();
+    console.log(`session ${session.number}`);
     console.log('-----');
-    if (sessions.every(s => s.done)) {
-      bot.disconnect(_ => promiseResolve());
+    try {
+      await joinChannel(session);
+      if (dismissBots) {
+        await draftMinutes(session);
+      }
+      else {
+        await setTopic(session);
+        await inviteBot(session, 'RRSAgent');
+        await setupRRSAgent(session);
+        await inviteBot(session, 'Zakim');
+        await setupZakim(session);
+        await leaveChannel(session);
+      }
     }
-  });
+    catch (err) {
+      errors.push(`- ${session.number}: ${err.message}`);
+      console.log(`- An error occurred: ${err.message}`);
+    }
+    console.log('-----');
+  }
 
-  let promiseResolve;
-  return new Promise(resolve => promiseResolve = resolve);
-}
-
-
-// Read slot from command-line
-if (!process.argv[2] || !process.argv[2].match(/^(\d{1,2}:\d{2}|all)$/)) {
-  console.log('Command needs to receive a valid slot start time (e.g., 9:30) or "all" as first parameter');
-  process.exit(1);
+  if (!onlyCommands) {
+    return new Promise((resolve, reject) => {
+      console.log('Disconnect from IRC server...');
+      bot.disconnect(_ => {
+        console.log('Disconnect from IRC server... done');
+        if (errors.length > 0) {
+          reject(new Error(errors.join('\n')));
+        }
+        else {
+          resolve();
+        }
+      });
+    });
+  }
 }
 
 // Read session number from command-line
-if (!process.argv[3] || !process.argv[3].match(/^(\d+|all)$/)) {
-  console.log('Command needs to receive a session number (e.g., 15) or "all" as second parameter');
+if (!process.argv[2] || !process.argv[2].match(/^(\d+|all)$/)) {
+  console.log('Command needs to receive a session number (e.g., 15) or "all" as first parameter');
   process.exit(1);
 }
+const number = process.argv[2] === 'all' ? undefined : parseInt(process.argv[2], 10);
 
 // Command only?
-const onlyCommands = process.argv[4] === 'commands';
-const dismissBots = process.argv[5] === 'dismiss';
+const onlyCommands = process.argv[3] === 'commands';
+const dismissBots = process.argv[4] === 'dismiss';
 
-
-const slot = process.argv[2] === 'all' ? undefined : process.argv[2];
-const number = process.argv[3] === 'all' ? undefined : parseInt(process.argv[3], 10);
-
-main({ slot, number, onlyCommands, dismissBots })
+main({ number, onlyCommands, dismissBots })
   .then(_ => process.exit(0))
   .catch(err => {
-    console.log(`Something went wrong: ${err.message}`);
-    throw err;
+    console.error(`Something went wrong:\n${err.message}`);
+    process.exit(1);
   });
