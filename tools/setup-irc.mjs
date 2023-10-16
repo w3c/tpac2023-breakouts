@@ -175,6 +175,14 @@ async function main({ number, onlyCommands, dismissBots } = {}) {
       }
     });
 
+    // Listen to the list of users in the channels we joined
+    bot.addListener('names', (channel, nicks) => {
+      if (pendingIRCMessage.what.command === 'names' &&
+          pendingIRCMessage.what.channel === channel) {
+        pendingIRCMessage.resolve(Object.keys(nicks));
+      }
+    });
+
     // Listen to the MESSAGE messages that contain bot replies to our commands.
     bot.addListener('message', (nick, channel, text, message) => {
       if (pendingIRCMessage.what.command === 'message' &&
@@ -230,7 +238,7 @@ async function main({ number, onlyCommands, dismissBots } = {}) {
     console.log(`/join ${channel}`);
     if (!onlyCommands) {
       bot.join(channel);
-      return waitForIRCMessage({ command: 'join', channel, nick: botName });
+      return waitForIRCMessage({ command: 'names', channel, nick: botName });
     }
   }
 
@@ -326,15 +334,27 @@ async function main({ number, onlyCommands, dismissBots } = {}) {
     });
   }
 
-  async function draftMinutes(session) {
+  async function draftMinutes(session, channelUsers) {
     const channel = getChannel(session);
-    await say(channel, `Zakim, bye`);
-    await say(channel, {
-      to: 'RRSAgent',
-      message: 'draft minutes',
-      reply: 'I have made the request to generate'
-    });
-    await say(channel, `RRSAgent, bye`);
+    if (channelUsers.includes('Zakim')) {
+      await say(channel, `Zakim, bye`);
+    }
+    if (channelUsers.includes('RRSAgent')) {
+      // Should have been already done in theory, but worth re-doing just in
+      // case, especially since RRSAgent won't leave a channel until some
+      // access level has been specified.
+      await say(channel, {
+        to: 'RRSAgent',
+        message: `make logs ${session.description.attendance === 'restricted' ? 'member' : 'public'}`,
+        reply: `I have made the request, ${botName}`
+      });
+      await say(channel, {
+        to: 'RRSAgent',
+        message: 'draft minutes',
+        reply: 'I have made the request to generate'
+      });
+      await say(channel, `RRSAgent, bye`);
+    }
   }
 
   // Helper function to send a message to a channel. The function waits for a
@@ -361,15 +381,19 @@ async function main({ number, onlyCommands, dismissBots } = {}) {
     console.log(`session ${session.number}`);
     console.log('-----');
     try {
-      await joinChannel(session);
+      const channelUsers = await joinChannel(session);
       if (dismissBots) {
-        await draftMinutes(session);
+        await draftMinutes(session, channelUsers);
       }
       else {
         await setTopic(session);
-        await inviteBot(session, 'RRSAgent');
+        if (!channelUsers.includes('RRSAgent')) {
+          await inviteBot(session, 'RRSAgent');
+        }
         await setupRRSAgent(session);
-        await inviteBot(session, 'Zakim');
+        if (!channelUsers.includes('Zakim')) {
+          await inviteBot(session, 'Zakim');
+        }
         await setupZakim(session);
         await leaveChannel(session);
       }
